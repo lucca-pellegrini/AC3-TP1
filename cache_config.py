@@ -3,9 +3,6 @@ import sys
 import m5
 from m5.objects import *
 
-# Simple cache hierarchy configuration for gem5
-# Usage: ~/src/gem5/build/ALL/gem5.opt cache_config.py [workload_path] [workload_args...]
-
 # Get workload from arguments
 if len(sys.argv) > 1:
     workload_path = sys.argv[1]
