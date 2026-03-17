@@ -1,0 +1,18 @@
+{
+  "typeCheckingMode": "strict",
+  "extraPaths": [
+    "build/ALL/python",
+    "typings"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "typeCheckingMode": "off",
+      "reportAttributeAccessIssue": "none",
+      "reportUnknownMemberType": "none",
+      "reportMissingImports": "none",
+      "reportUndefinedVariable": "none",
+      "reportUnknownVariableType": "none"
+    }
+  ]
+}

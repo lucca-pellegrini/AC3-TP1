@@ -1,0 +1,32 @@
+# Zig build artifacts
+zig-out/
+zig-cache/
+.zig-cache/
+
+# gem5 results and output
+results/
+*.txt
+*.log
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+/tmp/
+*.tmp.zig-cache
+zig-out
+m5out
+.zig-cache
