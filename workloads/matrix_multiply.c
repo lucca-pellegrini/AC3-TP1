@@ -1,3 +1,4 @@
+#include <gem5/m5ops.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -44,8 +45,18 @@ int main(int argc, char *argv[])
 		C[i] = 0.0;
 	}
 
+	// ======== HOT CODE ========
+	puts("Setup complete. Collecting stats...");
+	fflush(stdout);
+
 	// Perform matrix multiplication
+	m5_reset_stats(0, 0);
 	matrix_multiply(A, B, C, size);
+	m5_dump_stats(0, 0);
+
+	puts("Stats collection complete.");
+	fflush(stdout);
+	// ==========================
 
 	// Print a sample result to prevent optimization
 	printf("C[0][0] = %f\n", C[0]);

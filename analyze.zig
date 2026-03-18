@@ -6,7 +6,7 @@ pub fn main() !void {
     // Read stats file
     const stats_file = std.fs.cwd().openFile("m5out/stats.txt", .{}) catch {
         std.debug.print("Error: Could not open m5out/stats.txt\n", .{});
-        std.debug.print("Run gem5 first with: ~/src/gem5/build/ALL/gem5.opt cache_config.py ./zig-out/bin/workload\n", .{});
+        std.debug.print("Run gem5 first with: ./gem5/build/ALL/gem5.opt cache_config.py ./zig-out/bin/workload\n", .{});
         return;
     };
     defer stats_file.close();

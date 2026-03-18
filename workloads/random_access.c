@@ -1,3 +1,4 @@
+#include <gem5/m5ops.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -45,8 +46,18 @@ int main(int argc, char *argv[])
 		array[i] = i % 1000;
 	}
 
+	// ======== HOT CODE ========
+	puts("Setup complete. Collecting stats...");
+	fflush(stdout);
+
 	// Perform random access
+	m5_reset_stats(0, 0);
 	random_access(array, ARRAY_SIZE, num_accesses);
+	m5_dump_stats(0, 0);
+
+	puts("Stats collection complete.");
+	fflush(stdout);
+	// ==========================
 
 	free(array);
 	return 0;

@@ -1,16 +1,19 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Target x86_64-linux with glibc (for gem5 compatibility)
+    // Target x86_64-linux
     const target = b.standardTargetOptions(.{
         .default_target = .{
             .cpu_arch = .x86_64,
             .os_tag = .linux,
-            .abi = .gnu,
+            .abi = .musl,
         },
     });
 
     const optimize = b.standardOptimizeOption(.{});
+
+    const gem5_include = b.path("gem5/include");
+    const m5_lib = b.path("gem5/util/m5/build/x86/out/libm5.a");
 
     // Build all C workloads in the workloads directory
     const workloads = [_][]const u8{
@@ -33,10 +36,16 @@ pub fn build(b: *std.Build) void {
             .file = b.path(b.fmt("workloads/{s}.c", .{workload_name})),
             .flags = &[_][]const u8{
                 "-std=c99",
+                "-Wall",
+                "-Wextra",
+                "-pedantic",
                 "-D_GNU_SOURCE",
-                "-O2",
+                "-O3",
             },
         });
+
+        exe.root_module.addIncludePath(gem5_include);
+        exe.root_module.addObjectFile(m5_lib);
 
         b.installArtifact(exe);
     }
