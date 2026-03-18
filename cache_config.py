@@ -71,19 +71,19 @@ system.l3cache = Cache(
 system.cache_line_size = 64
 
 # Create buses
-system.l2bus = NoncoherentXBar(
+system.l2bus = SystemXBar(
     frontend_latency=1,
     forward_latency=2,
     response_latency=2,
     width=32
 )
-system.l3bus = NoncoherentXBar(
+system.l3bus = SystemXBar(
     frontend_latency=1,
     forward_latency=2,
     response_latency=2,
     width=32
 )
-system.membus = NoncoherentXBar(
+system.membus = SystemXBar(
     frontend_latency=1,
     forward_latency=2,
     response_latency=2,
