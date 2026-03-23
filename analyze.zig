@@ -3,13 +3,23 @@ const std = @import("std");
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    // Read stats file
-    const stats_file = std.fs.cwd().openFile("m5out/stats.txt", .{}) catch {
-        std.debug.print("Error: Could not open m5out/stats.txt\n", .{});
-        std.debug.print("Run gem5 first with: ./gem5/build/ALL/gem5.opt cache_config.py ./zig-out/bin/workload\n", .{});
+    const stats_dir = if (std.os.argv.len > 1) std.mem.span(std.os.argv[1]) else "m5out";
+    std.debug.print("{s}\n", .{stats_dir});
+
+    const stats_path = try std.fs.path.join(allocator, &.{ stats_dir, "stats.txt" });
+    defer allocator.free(stats_path);
+
+    // Open stats file
+    const stats_file = std.fs.cwd().openFile(stats_path, .{}) catch {
+        std.debug.print("Error: Could not open {s}\n", .{stats_path});
+        std.debug.print(
+            "Usage: analyze [stats_dir]\nDefault: m5out\n",
+            .{},
+        );
         return;
     };
     defer stats_file.close();
+    std.debug.print("Opened {s}\n", .{stats_path});
 
     const content = try stats_file.readToEndAlloc(allocator, 10 * 1024 * 1024);
     defer allocator.free(content);

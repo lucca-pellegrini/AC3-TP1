@@ -6,20 +6,26 @@ pub fn build(b: *std.Build) void {
         .default_target = .{
             .cpu_arch = .x86_64,
             .os_tag = .linux,
-            .abi = .musl,
+            .abi = .gnu,
         },
     });
 
     const optimize = b.standardOptimizeOption(.{});
 
+    const misc_include = b.path("include");
     const gem5_include = b.path("gem5/include");
     const m5_lib = b.path("gem5/util/m5/build/x86/out/libm5.a");
 
     // Build all C workloads in the workloads directory
     const workloads = [_][]const u8{
-        "matrix_multiply",
         "array_stride",
+        "atax",
+        "floyd-warshall",
+        "gemm",
+        "jacobi-2d",
+        "matrix_multiply",
         "random_access",
+        "seidel-2d",
     };
 
     for (workloads) |workload_name| {
@@ -43,7 +49,19 @@ pub fn build(b: *std.Build) void {
                 "-O3",
             },
         });
+        exe.addCSourceFile(.{
+            .file = b.path("workloads/polybench.c"),
+            .flags = &[_][]const u8{
+                "-std=c99",
+                "-Wall",
+                "-Wextra",
+                "-pedantic",
+                "-D_GNU_SOURCE",
+                "-O3",
+            },
+        });
 
+        exe.root_module.addIncludePath(misc_include);
         exe.root_module.addIncludePath(gem5_include);
         exe.root_module.addObjectFile(m5_lib);
 
@@ -62,6 +80,9 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(analyze);
 
     const run_analyze = b.addRunArtifact(analyze);
+    if (b.args) |args| {
+        run_analyze.addArgs(args);
+    }
     const analyze_step = b.step("analyze", "Analyze gem5 cache statistics");
     analyze_step.dependOn(&run_analyze.step);
 }

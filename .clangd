@@ -1,5 +1,6 @@
 CompileFlags:
   Add: [
     "-I../gem5/include",
+    "-I../include",
     "-D_GNU_SOURCE"
   ]
