@@ -11,12 +11,12 @@ CACHE_SIZE_CONFIGS = {
     'intel_core_i9_9900k': ('32KiB', '32KiB', '256KiB', '16MiB'),  # Coffee Lake
     'amd_ryzen_5600x': ('32KiB', '32KiB', '512KiB', '32MiB'),  # Zen 3
     'amd_ryzen_7700x': ('32KiB', '32KiB', '1MiB', '32MiB'),  # Zen 4
-    'intel_xeon_gold': ('32KiB', '32KiB', '1MiB', '24MiB'),  # Cascade Lake
+    'intel_xeon_gold': ('32KiB', '32KiB', '1MiB', '32MiB'),  # Cascade Lake (adjusted for power-of-2)
     'apple_m1': ('64KiB', '64KiB', '4MiB', '8MiB'),  # M1 (estimated)
     'apple_m2': ('64KiB', '64KiB', '4MiB', '16MiB'),  # M2 (estimated)
-    'intel_atom': ('24KiB', '24KiB', '1MiB', '4MiB'),  # Atom (low power)
+    'intel_atom': ('32KiB', '32KiB', '1MiB', '4MiB'),  # Atom (adjusted for power-of-2)
     'arm_cortex_a78': ('32KiB', '32KiB', '512KiB', '4MiB'),  # ARM mobile
-    'ibm_power10': ('48KiB', '32KiB', '2MiB', '8MiB'),  # POWER10
+    'ibm_power10': ('32KiB', '32KiB', '2MiB', '8MiB'),  # POWER10 (adjusted for power-of-2)
     'small_embedded': ('16KiB', '16KiB', '128KiB', '1MiB'),  # Small embedded
     'large_server': ('64KiB', '64KiB', '2MiB', '64MiB'),  # Large server config
 }
@@ -24,8 +24,8 @@ CACHE_SIZE_CONFIGS = {
 # Define realistic cache line sizes (in bytes)
 CACHE_LINE_SIZES = [32, 64, 128, 256]
 
-# Define associativity options
-ASSOCIATIVITIES = [1, 2, 4, 8, 12, 16]
+# Define associativity options - only powers of 2 for gem5 compatibility
+ASSOCIATIVITIES = [1, 2, 4, 8, 16]
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='gem5 cache configuration with customizable parameters')
