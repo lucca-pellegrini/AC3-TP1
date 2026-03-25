@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Wrapper script to run gem5 simulations with all parameter variations for a given workload.
-Usage: ./run_all_simulations.py <gem5_executable> <workload_binary> [workload_args...]
+Supports parallel execution using multiprocessing.
+Usage: ./run_all_simulations_parallel.py <gem5_executable> <workload_binary> [workload_args...]
 """
 
 import sys
@@ -10,7 +11,11 @@ import argparse
 from pathlib import Path
 import time
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
+from multiprocessing import Pool, Lock, Queue, Manager
+from functools import partial
+import signal
+import os
 
 # ANSI color codes for terminal output
 class Colors:
@@ -27,16 +32,42 @@ class Colors:
     BG_BLUE = '\033[44m'
     BG_YELLOW = '\033[43m'
     BG_CYAN = '\033[46m'
+    BG_MAGENTA = '\033[45m'
     BLACK = '\033[30m'
 
-def print_simulation_header(current: int, total: int, workload_name: str, config_desc: str) -> None:
+# Global lock for synchronized printing
+print_lock: Optional[Lock] = None
+
+def init_worker(lock: Lock) -> None:
+    """Initialize worker process with shared lock."""
+    global print_lock
+    print_lock = lock
+    # Ignore SIGINT in worker processes
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+def synchronized_print(*args, **kwargs) -> None:
+    """Thread-safe printing function."""
+    global print_lock
+    if print_lock:
+        with print_lock:
+            print(*args, **kwargs)
+            sys.stdout.flush()
+    else:
+        print(*args, **kwargs)
+        sys.stdout.flush()
+
+def print_simulation_header(current: int, total: int, workload_name: str, config_desc: str, parallel_info: str = "") -> None:
     """Print a colored header for the current simulation."""
     percentage = (current / total) * 100
     header = f" SIMULATION {current}/{total} ({percentage:.1f}%) - {workload_name} "
     config_line = f" Configuration: {config_desc} "
 
-    # Choose color based on progress
-    if percentage < 33:
+    # Choose background color based on status in parallel_info
+    if "FAILED" in parallel_info or "ERROR" in parallel_info or "TIMEOUT" in parallel_info:
+        bg_color = Colors.BG_MAGENTA  # Red/magenta for failures
+    elif "SKIPPED" in parallel_info:
+        bg_color = Colors.BG_CYAN  # Cyan for skipped
+    elif percentage < 33:
         bg_color = Colors.BG_YELLOW
     elif percentage < 66:
         bg_color = Colors.BG_CYAN
@@ -44,15 +75,22 @@ def print_simulation_header(current: int, total: int, workload_name: str, config
         bg_color = Colors.BG_GREEN
 
     # Create a box around the header
-    max_len = max(len(header), len(config_line))
+    lines = [header, config_line]
+    if parallel_info:
+        lines.append(f" {parallel_info} ")
+
+    max_len = max(len(line) for line in lines)
     border = "=" * (max_len + 2)
 
-    print(f"\n{Colors.BOLD}{bg_color}{Colors.BLACK}")
-    print(f" {border} ")
-    print(f" {header.center(max_len)} ")
-    print(f" {config_line.center(max_len)} ")
-    print(f" {border} ")
-    print(f"{Colors.ENDC}\n")
+    output = []
+    output.append(f"\n{Colors.BOLD}{bg_color}{Colors.BLACK}")
+    output.append(f" {border} ")
+    for line in lines:
+        output.append(f" {line.center(max_len)} ")
+    output.append(f" {border} ")
+    output.append(f"{Colors.ENDC}\n")
+
+    synchronized_print('\n'.join(output))
 
 def check_simulation_completed(output_dir: Path) -> bool:
     """Check if a simulation has completed successfully."""
@@ -78,8 +116,35 @@ def check_simulation_completed(output_dir: Path) -> bool:
 
     return False
 
-def run_simulation(gem5_exe: str, cache_config_script: str, workload: str, workload_args: List[str], output_dir: Path, param_name: Optional[str] = None, param_value: Optional[str] = None) -> bool:
-    """Run a single gem5 simulation with given parameters."""
+def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
+    """
+    Worker function to run a single simulation.
+    Returns: (success, description, elapsed_time)
+    """
+    # Extract simulation parameters
+    gem5_exe = sim_data['gem5_exe']
+    cache_config_script = sim_data['cache_config_script']
+    workload = sim_data['workload']
+    workload_args = sim_data['workload_args']
+    output_dir = Path(sim_data['output_dir'])
+    param_name = sim_data.get('param_name')
+    param_value = sim_data.get('param_value')
+    desc = sim_data['desc']
+    sim_index = sim_data['sim_index']
+    total_sims = sim_data['total_sims']
+    workload_name = sim_data['workload_name']
+    worker_id = sim_data.get('worker_id', 0)
+
+    # Check if already completed
+    if check_simulation_completed(output_dir):
+        # Print completion header for skipped simulation
+        parallel_info = f"Worker {worker_id} - SKIPPED (already done)"
+        print_simulation_header(sim_index, total_sims, workload_name, desc, parallel_info)
+        return (True, desc, 0.0)
+
+    # Create output directory
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     # Build the command
     cmd = [gem5_exe, '-d', str(output_dir), '--', cache_config_script]
 
@@ -91,8 +156,9 @@ def run_simulation(gem5_exe: str, cache_config_script: str, workload: str, workl
     cmd.append(workload)
     cmd.extend(workload_args)
 
-    # Run the simulation
-    print(f"{Colors.OKCYAN}Command: {' '.join(cmd)}{Colors.ENDC}")
+    # Print starting message (without the big colored header)
+    synchronized_print(f"{Colors.OKCYAN}[Worker {worker_id}] Starting: {desc}{Colors.ENDC}")
+    synchronized_print(f"{Colors.OKCYAN}[Worker {worker_id}] Command: {' '.join(cmd)}{Colors.ENDC}")
 
     try:
         start_time = time.time()
@@ -100,22 +166,33 @@ def run_simulation(gem5_exe: str, cache_config_script: str, workload: str, workl
         elapsed_time = time.time() - start_time
 
         if result.returncode == 0:
-            print(f"{Colors.OKGREEN}✓ Simulation completed in {elapsed_time:.1f} seconds{Colors.ENDC}")
+            # Print success header AFTER completion
+            parallel_info = f"Worker {worker_id} - COMPLETED in {elapsed_time:.1f}s"
+            print_simulation_header(sim_index, total_sims, workload_name, desc, parallel_info)
+            synchronized_print(f"{Colors.OKGREEN}[Worker {worker_id}] ✓ Success{Colors.ENDC}")
             # Mark as completed
             (output_dir / '.completed').touch()
-            return True
+            return (True, desc, elapsed_time)
         else:
-            print(f"{Colors.FAIL}✗ Simulation failed with return code {result.returncode}{Colors.ENDC}")
-            if result.stderr:
-                print(f"Error output: {result.stderr[:500]}...")  # Print first 500 chars of error
-            return False
+            # Print failure header AFTER completion
+            parallel_info = f"Worker {worker_id} - FAILED (code {result.returncode})"
+            print_simulation_header(sim_index, total_sims, workload_name, desc, parallel_info)
+            error_msg = result.stderr[:500] if result.stderr else "Unknown error"
+            synchronized_print(f"{Colors.FAIL}[Worker {worker_id}] ✗ Error: {error_msg}...{Colors.ENDC}")
+            return (False, desc, elapsed_time)
 
     except subprocess.TimeoutExpired:
-        print(f"{Colors.FAIL}✗ Simulation timed out after 600 seconds{Colors.ENDC}")
-        return False
+        # Print timeout header AFTER timeout
+        parallel_info = f"Worker {worker_id} - TIMEOUT"
+        print_simulation_header(sim_index, total_sims, workload_name, desc, parallel_info)
+        synchronized_print(f"{Colors.FAIL}[Worker {worker_id}] ✗ Timed out after 600 seconds{Colors.ENDC}")
+        return (False, desc, 600.0)
     except Exception as e:
-        print(f"{Colors.FAIL}✗ Error running simulation: {e}{Colors.ENDC}")
-        return False
+        # Print error header AFTER error
+        parallel_info = f"Worker {worker_id} - ERROR"
+        print_simulation_header(sim_index, total_sims, workload_name, desc, parallel_info)
+        synchronized_print(f"{Colors.FAIL}[Worker {worker_id}] ✗ Error: {e}{Colors.ENDC}")
+        return (False, desc, 0.0)
 
 def get_all_parameter_variations() -> List[Tuple[str, str, str]]:
     """Get all parameter variations to test."""
@@ -152,11 +229,6 @@ def get_all_parameter_variations() -> List[Tuple[str, str, str]]:
     for assoc in associativities:
         variations.append(('l3-assoc', str(assoc), f'l3_assoc_{assoc}'))
 
-    # Memory latencies - removed as per assignment requirements
-    # mem_latencies = ['fast', 'baseline', 'slow', 'very_slow']
-    # for latency in mem_latencies:
-    #     variations.append(('mem-latency', latency, f'mem_latency_{latency}'))
-
     return variations
 
 def main():
@@ -166,8 +238,16 @@ def main():
     parser.add_argument('workload_args', nargs='*', default=[], help='Arguments to pass to the workload')
     parser.add_argument('--results-dir', default='results', help='Base directory for results (default: results)')
     parser.add_argument('--dry-run', action='store_true', help='Show what would be run without executing')
+    parser.add_argument('--parallel', '-j', type=int, default=1,
+                        help='Number of parallel simulations to run (default: 1, use -1 for all CPU cores)')
 
     args = parser.parse_args()
+
+    # Determine number of workers
+    if args.parallel == -1:
+        num_workers = os.cpu_count() or 1
+    else:
+        num_workers = max(1, args.parallel)
 
     # Validate inputs
     gem5_exe = Path(args.gem5_exe)
@@ -190,7 +270,7 @@ def main():
     # Get all parameter variations
     variations = get_all_parameter_variations()
 
-    # Add baseline (no parameters) as the first simulation
+    # Build list of all simulations
     all_simulations: List[Tuple[str, Optional[str], Optional[str], str]] = [('baseline', None, None, 'baseline')]
 
     # Add all variations
@@ -198,58 +278,94 @@ def main():
         all_simulations.append((f'{param_name}={param_value}', param_name, param_value, dir_suffix))
 
     total_simulations = len(all_simulations)
-    completed = 0
-    skipped = 0
-    failed = 0
 
     print(f"\n{Colors.BOLD}{Colors.HEADER}=== GEM5 SIMULATION RUNNER ==={Colors.ENDC}")
     print(f"Workload: {Colors.BOLD}{workload_name}{Colors.ENDC} ({workload})")
     print(f"Workload args: {' '.join(args.workload_args) if args.workload_args else '(none)'}")
     print(f"Total simulations to run: {Colors.BOLD}{total_simulations}{Colors.ENDC}")
+    print(f"Parallel workers: {Colors.BOLD}{num_workers}{Colors.ENDC}")
     print(f"Results directory: {results_dir.absolute()}")
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
     if args.dry_run:
         print(f"{Colors.WARNING}DRY RUN MODE - No simulations will be executed{Colors.ENDC}\n")
+        for i, (desc, param_name, param_value, dir_suffix) in enumerate(all_simulations, 1):
+            output_dir = results_dir / f"{workload_name}_{dir_suffix}"
+            print(f"{i}/{total_simulations}: {desc}")
+            print(f"  Directory: {output_dir}")
+            if param_name:
+                print(f"  Parameter: --{param_name}={param_value}")
+        return
 
-    # Run each simulation
+    # Prepare simulation data for workers
+    simulation_tasks = []
     for i, (desc, param_name, param_value, dir_suffix) in enumerate(all_simulations, 1):
-        # Create output directory for this simulation
         output_dir = results_dir / f"{workload_name}_{dir_suffix}"
 
-        # Check if already completed
-        if check_simulation_completed(output_dir):
-            print(f"\n{Colors.OKGREEN}Skipping simulation {i}/{total_simulations}: {desc} (already completed){Colors.ENDC}")
-            skipped += 1
-            continue
+        sim_data = {
+            'gem5_exe': str(gem5_exe),
+            'cache_config_script': 'cache_config.py',
+            'workload': str(workload),
+            'workload_args': args.workload_args,
+            'output_dir': str(output_dir),
+            'param_name': param_name,
+            'param_value': param_value,
+            'desc': desc,
+            'sim_index': i,
+            'total_sims': total_simulations,
+            'workload_name': workload_name,
+        }
+        simulation_tasks.append(sim_data)
 
-        # Print header for this simulation
-        print_simulation_header(i, total_simulations, workload_name, desc)
+    # Run simulations
+    if num_workers == 1:
+        # Sequential execution
+        print(f"{Colors.OKCYAN}Running simulations sequentially...{Colors.ENDC}\n")
+        completed = 0
+        failed = 0
+        skipped = 0
 
-        if args.dry_run:
-            print(f"Would create directory: {output_dir}")
-            if param_name:
-                print(f"Would run with parameter: --{param_name}={param_value}")
-            continue
+        for i, sim_data in enumerate(simulation_tasks):
+            sim_data['worker_id'] = 0
+            success, desc, elapsed = run_single_simulation(sim_data)
+            if elapsed == 0.0:  # Skipped
+                skipped += 1
+            elif success:
+                completed += 1
+            else:
+                failed += 1
+    else:
+        # Parallel execution
+        print(f"{Colors.OKCYAN}Running simulations in parallel with {num_workers} workers...{Colors.ENDC}\n")
 
-        # Create output directory
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Assign worker IDs to tasks
+        for i, sim_data in enumerate(simulation_tasks):
+            sim_data['worker_id'] = (i % num_workers) + 1
 
-        # Run the simulation
-        success = run_simulation(
-            str(gem5_exe),
-            'cache_config.py',
-            str(workload),
-            args.workload_args,
-            output_dir,
-            param_name,
-            param_value
-        )
+        # Create manager for shared lock
+        manager = Manager()
+        lock = manager.Lock()
 
-        if success:
-            completed += 1
-        else:
-            failed += 1
+        # Initialize pool with lock
+        try:
+            with Pool(processes=num_workers, initializer=init_worker, initargs=(lock,)) as pool:
+                # Set up global lock for main process too
+                global print_lock
+                print_lock = lock
+
+                # Run simulations
+                results = pool.map(run_single_simulation, simulation_tasks)
+
+                # Count results
+                completed = sum(1 for success, _, elapsed in results if success and elapsed > 0)
+                failed = sum(1 for success, _, _ in results if not success)
+                skipped = sum(1 for _, _, elapsed in results if elapsed == 0.0)
+
+        except KeyboardInterrupt:
+            print(f"\n{Colors.WARNING}Interrupted by user. Terminating workers...{Colors.ENDC}")
+            pool.terminate()
+            pool.join()
+            sys.exit(1)
 
     # Print summary
     print(f"\n{Colors.BOLD}{Colors.HEADER}=== SIMULATION SUMMARY ==={Colors.ENDC}")
