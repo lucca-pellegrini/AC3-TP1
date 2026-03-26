@@ -33,6 +33,10 @@ parser.add_argument('workload', nargs='?', default='./zig-out/bin/matrix_multipl
                     help='Path to workload binary')
 parser.add_argument('workload_args', nargs='*',
                     help='Arguments for the workload')
+parser.add_argument('--wait-gdb', action='store_true',
+                    help='Wait for GDB connection before starting simulation')
+parser.add_argument('--gdb-port', type=int, default=7000,
+                    help='Port for remote GDB server')
 
 # Cache parameter arguments (only one should be specified at a time)
 cache_group = parser.add_mutually_exclusive_group()
@@ -185,7 +189,8 @@ system.cpu.interrupts[0].int_responder = system.membus.mem_side_ports
 
 # Setup system workload
 system.workload = SEWorkload.init_compatible(workload_path)
-# system.workload.wait_for_remote_gdb = True
+system.workload.wait_for_remote_gdb = args.wait_gdb
+system.workload.remote_gdb_port = args.gdb_port
 
 # Create process
 process = Process()
