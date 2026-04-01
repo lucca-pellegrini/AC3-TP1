@@ -27,18 +27,13 @@ from typing import Dict, List, Optional, Tuple, Callable, Sequence, Union, Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import scienceplots
+import pandas as pd  # type: ignore[import-not-found]
+import scienceplots  # type: ignore[import-not-found]
 
 assert (
     scienceplots  # ensure the imported style package is recognized as used by linters
 )
 
-# =============================================================================
-# STYLE CONFIGURATION - delegated to matplotlib style (e.g. SciencePlots)
-# =============================================================================
-
-# Figure sizes are applied inline per-figure to match IEEE column sizing.
 
 # Preferred style list (used with context where possible)
 STYLE_LIST: List[str] = ["science", "ieee"]
@@ -149,10 +144,6 @@ def _series_style_kwargs(
     return kw
 
 
-# =============================================================================
-# CONFIGURATION MAPPINGS
-# =============================================================================
-
 # Cache size configurations from cache_config.py (total cache size for sorting)
 CACHE_SIZE_CONFIGS = {
     "baseline": ("32KiB", "32KiB", "256KiB", "8MiB"),
@@ -189,11 +180,6 @@ POLYBENCH_WORKLOADS = ["atax", "floyd-warshall", "gemm", "jacobi-2d", "seidel-2d
 # Parameter types and their values
 CACHE_LINE_SIZES = [32, 64, 128, 256]
 ASSOCIATIVITIES = [1, 2, 4, 8, 16]
-
-
-# =============================================================================
-# DATA STRUCTURES
-# =============================================================================
 
 
 @dataclass
@@ -233,11 +219,6 @@ class SimulationStats:
     l2_mpki: float = 0.0
     l3_mpki: float = 0.0
     total_miss_latency: float = 0.0  # Sum of all cache miss latencies
-
-
-# =============================================================================
-# PARSING FUNCTIONS
-# =============================================================================
 
 
 def parse_size_to_bytes(size_str: str) -> int:
@@ -434,11 +415,6 @@ def collect_all_results(results_dir: Path) -> Dict[str, List[SimulationStats]]:
     return results
 
 
-# =============================================================================
-# PLOTTING HELPER FUNCTIONS
-# =============================================================================
-
-
 def get_sorted_data(
     stats_list: List[SimulationStats], config_type: str
 ) -> Tuple[Sequence[Union[str, int]], List[SimulationStats]]:
@@ -463,11 +439,6 @@ def get_sorted_data(
         x_values = [s.config_value for s in filtered]
 
     return x_values, filtered
-
-
-# =============================================================================
-# MAIN PLOTTING FUNCTIONS
-# =============================================================================
 
 
 def _delta_vs_baseline(
