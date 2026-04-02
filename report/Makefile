@@ -22,7 +22,7 @@ clean:
 	$(LATEX) $(CLEANFLAGS)
 	$(RM) -r *.pdf *.ps *.idx *.bbl *.brf *.glo *.dvi *.toc *.lof *.aux \
 		*.log *.blg *.ilg *.ind *.out *.wsp *.fls *.synctex* *.zip  \
-		*.tar.gz *.*~ build/ latex.out/
+		*.tar.gz *.tar.xz *.tar.zst *.*~ build/ latex.out/
 
 $(MAIN).pdf: $(ETC) force $(FIG)
 	$(LATEX) $(LATEXFLAGS) $(MAIN).tex
