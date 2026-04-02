@@ -200,36 +200,32 @@ for simulations, implementing the following features:
 \subsubsection{Tested Cache Configurations}
 
 Each workload was tested against 11 realistic cache configurations based on
-real commercial architectures:
+real commercial architectures:\footnote{For the Intel Atom and IBM POWER10
+configurations, cache sizes were adjusted to the nearest power-of-two values to
+ensure compatibility with the gem5 simulator.}
 
 \begin{table}[h]
 	\centering
 	\caption{Tested cache configuration presets}
-	\resizebox{\columnwidth}{!}{
-		\begin{tabular}{|c|c|c|c|c|c|}
-			\hline
-			\textbf{Config}     & \textbf{L1I} & \textbf{L1D} & \textbf{L2} & \textbf{L3} \\
-			\hline
-			i7-6700K (baseline) & 32KiB        & 32KiB        & 256KiB      & 8MiB        \\
-			i9-9900K            & 32KiB        & 32KiB        & 256KiB      & 16MiB       \\
-			Ryzen 5600X         & 32KiB        & 32KiB        & 512KiB      & 32MiB       \\
-			Ryzen 7700X         & 32KiB        & 32KiB        & 1MiB        & 32MiB       \\
-			Apple M1            & 64KiB        & 64KiB        & 4MiB        & 8MiB        \\
-			Apple M2            & 64KiB        & 64KiB        & 4MiB        & 16MiB       \\
-			Intel Atom          & 32KiB        & 32KiB        & 1MiB        & 4MiB        \\
-			Cortex A78          & 32KiB        & 32KiB        & 512KiB      & 4MiB        \\
-			POWER10             & 32KiB        & 32KiB        & 2MiB        & 8MiB        \\
-			Small Emb           & 16KiB        & 16KiB        & 128KiB      & 1MiB        \\
-			Large Srv           & 64KiB        & 64KiB        & 2MiB        & 64MiB       \\
-			\hline
-		\end{tabular}
-	}
+	\begin{tabular}{|l|c|c|c|c|c|}
+		\hline
+		\textbf{Preset}              & \textbf{L1I} & \textbf{L1D} & \textbf{L2} & \textbf{L3} \\
+		\hline
+		\hline
+		i7-6700K \textit{(baseline)} & 32 KiB       & 32 KiB       & 256 KiB     & 8 MiB       \\
+		Small Embedded               & 16 KiB       & 16 KiB       & 128 KiB     & 1 MiB       \\
+		Cortex A78                   & 32 KiB       & 32 KiB       & 512 KiB     & 4 MiB       \\
+		Intel Atom                   & 32 KiB       & 32 KiB       & 1 MiB       & 4 MiB       \\
+		IBM POWER10                  & 32 KiB       & 32 KiB       & 2 MiB       & 8 MiB       \\
+		Apple M1                     & 64 KiB       & 64 KiB       & 4 MiB       & 8 MiB       \\
+		i9-9900K                     & 32 KiB       & 32 KiB       & 256 KiB     & 16 MiB      \\
+		Ryzen 5600X                  & 32 KiB       & 32 KiB       & 512 KiB     & 32 MiB      \\
+		Apple M2                     & 64 KiB       & 64 KiB       & 4 MiB       & 16 MiB      \\
+		Ryzen 7700X                  & 32 KiB       & 32 KiB       & 1 MiB       & 32 MiB      \\
+		Large Server                 & 64 KiB       & 64 KiB       & 2 MiB       & 64 MiB      \\
+		\hline
+	\end{tabular}
 \end{table}
-
-\noindent\textit{Note:} For the Intel Atom and IBM POWER10 configurations,
-cache sizes were adjusted to the nearest power-of-two values to ensure
-compatibility with the gem5 simulator.
-
 
 \subsubsection{Additional Cache Parameters}
 
