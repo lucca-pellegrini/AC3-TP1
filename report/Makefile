@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: ISC
+# SPDX-FileCopyrightText: Copyright © 2026 Lucca M. A. Pellegrini <lucca@verticordia.com>
 
 NAME       = A_Quantitative_Cache_Evaluation_of_Select_PolyBench_Kernels_-_Andrade_Canizela_Dimas_Jordão_Pellegrini
 MAIN       = main
