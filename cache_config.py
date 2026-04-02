@@ -1,3 +1,7 @@
+# SPDX-License-Identifier: ISC
+# SPDX-FileCopyrightText: Copyright © 2026 Lucca M. A. Pellegrini <lucca@verticordia.com>
+# SPDX-FileCopyrightText: Copyright © 2026 Ariel Inácio Jordão <arielijordao@gmail.com>
+
 import argparse
 
 import m5

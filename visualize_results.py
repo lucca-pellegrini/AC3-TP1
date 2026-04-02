@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+
+# SPDX-License-Identifier: ISC
+# SPDX-FileCopyrightText: Copyright © 2026 Lucca M. A. Pellegrini <lucca@verticordia.com>
+# NOTE: Script written with help from LLMs!
+
 """
 gem5 Cache Simulation Results Visualization Script
 

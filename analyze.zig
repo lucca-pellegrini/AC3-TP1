@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: ISC
+// SPDX-FileCopyrightText: Copyright © 2026 Lucca M. A. Pellegrini <lucca@verticordia.com>
+// NOTE: File written with help from LLMs!
+
 const std = @import("std");
 
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
 
-    const stats_dir = if (std.os.argv.len > 1) std.mem.span(std.os.argv[1]) else "m5out";
-    std.debug.print("{s}\n", .{stats_dir});
+    const stats_dir = if (std.os.argv.len > 1) std.mem.span(std.os.argv[1]) else "results/atax_baseline";
 
     const stats_path = try std.fs.path.join(allocator, &.{ stats_dir, "stats.txt" });
     defer allocator.free(stats_path);
@@ -13,7 +16,7 @@ pub fn main() !void {
     const stats_file = std.fs.cwd().openFile(stats_path, .{}) catch {
         std.debug.print("Error: Could not open {s}\n", .{stats_path});
         std.debug.print(
-            "Usage: analyze [stats_dir]\nDefault: m5out\n",
+            "Usage: zig build analyze -- [stats_dir]\nDefault: results/atax_baseline\n",
             .{},
         );
         return;

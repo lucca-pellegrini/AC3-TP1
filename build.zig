@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: ISC
+// SPDX-FileCopyrightText: Copyright © 2026 Lucca M. A. Pellegrini <lucca@verticordia.com>
+
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // Target x86_64-linux
+    // Target with static linking to avoid cross-platform simulation issues.
     const target = b.standardTargetOptions(.{
         .default_target = .{
             .cpu_arch = .x86_64,
@@ -12,6 +15,7 @@ pub fn build(b: *std.Build) void {
 
     const optimize = b.standardOptimizeOption(.{});
 
+    // Set proper paths to headers and libraries.
     const misc_include = b.path("include");
     const gem5_include = b.path("gem5/include");
     const m5_lib = b.path("gem5/util/m5/build/x86/out/libm5.a");
@@ -55,7 +59,7 @@ pub fn build(b: *std.Build) void {
                 "-Wextra",
                 "-pedantic",
                 "-D_GNU_SOURCE",
-                "-DMINI_DATASET", // Debug build uses MINI dataset
+                "-DMINI_DATASET",
                 "-O3",
             },
         });
@@ -88,6 +92,7 @@ pub fn build(b: *std.Build) void {
             }),
         });
 
+        // Real run dataset executable.
         real_exe.addCSourceFile(.{
             .file = b.path(b.fmt("workloads/{s}.c", .{config.name})),
             .flags = &[_][]const u8{
@@ -96,7 +101,7 @@ pub fn build(b: *std.Build) void {
                 "-Wextra",
                 "-pedantic",
                 "-D_GNU_SOURCE",
-                b.fmt("-D{s}", .{config.real_dataset}), // Real run dataset
+                b.fmt("-D{s}", .{config.real_dataset}),
                 "-O3",
             },
         });
@@ -185,19 +190,7 @@ pub fn build(b: *std.Build) void {
                 "-O3",
             },
         });
-        real_exe.addCSourceFile(.{
-            .file = b.path("workloads/polybench.c"),
-            .flags = &[_][]const u8{
-                "-std=c99",
-                "-Wall",
-                "-Wextra",
-                "-pedantic",
-                "-D_GNU_SOURCE",
-                "-O3",
-            },
-        });
 
-        real_exe.root_module.addIncludePath(misc_include);
         real_exe.root_module.addIncludePath(gem5_include);
         real_exe.root_module.addObjectFile(m5_lib);
 
