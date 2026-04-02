@@ -594,13 +594,13 @@ understood as the kernel's hot working set.} fit in the larger caches.
 \begin{figure}[!htbp]
     \centering
     \caption{\textsc{ipc} vs. cache line sizes across kernels}
-    \includegraphics[width=\linewidth]{comparison_ipc_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/comparison_ipc_vs_cache_line.pdf}
 \end{figure}
 
 \begin{figure}[!htbp]
     \centering
     \caption{L1D miss rate vs. cache line sizes across kernels}
-    \includegraphics[width=\linewidth]{comparison_l1d_miss_rate_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/comparison_l1d_miss_rate_vs_cache_line.pdf}
 \end{figure}
 
 \subsection{Cache Line Size Effects}\label{sub:cacheline}
@@ -626,7 +626,7 @@ intensity.
 	\caption{\textbf{\textsc{ata}x} relative speedup vs. cache line sizes.
 	Correlation indicates a strongly spatial, memory-sensitive kernel.}
     \label{fig:atax-speedup-line}
-    \includegraphics[width=\linewidth]{atax_speedup_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/atax_speedup_vs_cache_line.pdf}
 \end{figure}
 
 \begin{figure}[!htbp]
@@ -634,7 +634,7 @@ intensity.
     \caption{\textbf{Jacobi-2D} L3 \textsc{mpki} halve for each doubling of
     cache line size.}
     \label{fig:jacobi-mpki-line}
-    \includegraphics[width=\linewidth]{jacobi-2d_mpki_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/jacobi-2d_mpki_vs_cache_line.pdf}
 \end{figure}
 
 \begin{figure}[!htbp]
@@ -642,7 +642,7 @@ intensity.
     \caption{\textbf{Seidel-2D} latency also decreases significantly for each
     doubling of cache line size.}
     \label{fig:seidel-stalls-line}
-    \includegraphics[width=\linewidth]{seidel-2d_memory_stalls_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/seidel-2d_memory_stalls_vs_cache_line.pdf}
 \end{figure}
 
 \begin{figure}[!htbp]
@@ -650,7 +650,7 @@ intensity.
 	\caption{\textbf{\textsc{gemm}} \textsc{cpi} shows gains are modest,
 	because kernel is compute-heavy with non-zero memory sensitivity.}
     \label{fig:gemm-cpi-line}
-    \includegraphics[width=\linewidth]{gemm_cpi_vs_cache_line.pdf}
+    \includegraphics[width=\linewidth]{../figures/gemm_cpi_vs_cache_line.pdf}
 \end{figure}
 
 \subsection{Associativity Changes Least Significant}
@@ -671,7 +671,7 @@ slightly lower instructions per cycle when the L1 caches are directly mapped.
 	\caption{\textsc{ipc} vs. L1 associativity across kernels shows negligible
 	impact on performance.}
     \label{fig:comp-ipc-l1}
-    \includegraphics[width=\linewidth]{comparison_ipc_vs_l1_assoc.pdf}
+    \includegraphics[width=\linewidth]{../figures/comparison_ipc_vs_l1_assoc.pdf}
 \end{figure}
 
 \subsection{Capacity Presets}
@@ -692,7 +692,7 @@ which had the most dramatic improvement.
 	\caption{$\Delta$\textsc{ipc} across cache configurations, showing that
 	only a subset produces noticeable gains.}
     \label{fig:comp-ipc-size}
-    \includegraphics[width=\linewidth]{comparison_ipc_vs_cache_config.pdf}
+    \includegraphics[width=\linewidth]{../figures/comparison_ipc_vs_cache_config.pdf}
 \end{figure}
 
 \begin{figure}[!htbp]
@@ -700,7 +700,7 @@ which had the most dramatic improvement.
 	\caption{\textbf{\textsc{ata}x} speedup as total cache size grows was the
 	highest among all tested kernels.}
     \label{fig:atax-speed-size}
-    \includegraphics[width=\linewidth]{atax_speedup_vs_cache_config.pdf}
+    \includegraphics[width=\linewidth]{../figures/atax_speedup_vs_cache_config.pdf}
 \end{figure}
 
 \subsection{Some Observations}
