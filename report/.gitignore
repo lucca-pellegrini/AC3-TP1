@@ -1,0 +1,6 @@
+*.pdf
+*.tar
+*.tar.[!.]*
+!*.tar.*.*
+*.zip
+build/
