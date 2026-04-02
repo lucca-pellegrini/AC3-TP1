@@ -43,7 +43,7 @@ $(RELEASE).tar.gz: $(RELEASE).tar
 $(RELEASE).tar.xz: $(RELEASE).tar
 	xz -kf $(RELEASE).tar
 
-$(RELEASE).tar.gz: $(RELEASE).tar
+$(RELEASE).tar.zst: $(RELEASE).tar
 	zstd -f $(RELEASE).tar
 
 $(RELEASE).zip: $(MAIN).pdf $(RELEASE).pdf
