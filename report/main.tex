@@ -419,6 +419,33 @@ budget (on the order of days). In particular, Floyd-Warshall exhibits cubic
 time complexity with a large constant factor, which necessitated the use of the
 \texttt{SMALL\_DATASET} configuration.
 
+\subsection{Reproducibility and Build Pipeline}
+
+We express the end-to-end workflow as an ordered, idempotent build graph in the
+Zig Build System (tied to Zig version~0.15.2~\cite{zig:2024}). The graph
+encodes, in dependency order: dependency checks; a pinned Python runtime via
+\texttt{pyenv} and a project virtual environment; gem5 submodule initialization
+and compilation; the \textit{libm5} library build; workload compilation and
+linking; the complete simulation sweep; figure generation; and the final
+\LaTeX{} report build.
+
+Versions are pinned to minimize drift. Python is fixed to 3.14.3 via
+\texttt{pyenv}, and all Python packages are frozen with \texttt{pip~freeze}.
+The gem5 source is vendored as a Git submodule and built at the exact recorded
+commit (\texttt{7a2b0e4}). Workloads are statically linked x86-64 \textsc{elf}
+binaries against musl to reduce host-library variance. The only component not
+strictly pinned is the C toolchain; we run simulations with GCC version~\(\geq
+14\) and observe no material effect on the comparative cache trends within that
+range. All invocations of gem5, simulations, and analysis are routed through
+the project \texttt{venv} to ensure a consistent runtime across machines.
+
+Simulations are dispatched by a single Python orchestration script that
+enumerates the parameter grid, manages a worker pool, can pin workers to
+physical CPU cores to reduce noise, and writes each simulation's collected
+metrics under deterministic paths. The runner uses completion markers and
+key-counter checks to make the sweep idempotent and resumable. Together, the
+build graph and the runner provide a concise reproduction path.
+
 \section{Results}
 \subsection{Overview}
 
