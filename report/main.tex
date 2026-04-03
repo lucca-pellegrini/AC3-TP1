@@ -258,408 +258,155 @@ simulator.
 
 \subsection{Workload Selection}
 
-We use five PolyBench Kernels \cite{polybench:2016}
+We use five PolyBench Version~4.2.1~\cite{polybench:2016} kernels:
+\textsc{ata}x, Floyd-Warshall, \textsc{gemm}, Jacobi-2D, and Seidel-2D. These
+kernels capture a range of memory access patterns, including dense linear
+algebra with regular streaming accesses (\textsc{ata}x, \textsc{gemm}), dynamic
+programming with structured temporal reuse (Floyd-Warshall), and iterative
+stencil computations with localized spatial reuse (Jacobi-2D, Seidel-2D). This
+selection is intended to provide diverse locality characteristics while
+maintaining manageable simulation time.
 
+\subsubsection{\textsc{gemm} (General Matrix Multiply)} The \textsc{gemm}
+kernel implements dense matrix multiplication, a core operation in
+\textsc{blas} (Basic Linear Algebra Subprograms)~\cite{lawson:1979}, computing
+a linear combination of matrix products:
 
+\[
+C_{ij} \leftarrow \beta C_{ij} + \alpha \sum_{k=0}^{N-1} A_{ik} B_{kj}
+\]
 
+From PolyBench~\cite{polybench:2016}:
+\[
+\text{Time: } O(n^3), \quad \text{Memory: } O(n^2)
+\]
 
+This kernel exhibits regular, dense access patterns with high spatial locality
+and significant temporal reuse, particularly in the accumulation of $C_{ij}$.
 
+\subsubsection{\textsc{ata}x (Matrix-Vector Transpose Product)} The
+\textsc{ata}x kernel computes a matrix-vector product followed by a transpose
+multiplication, a common pattern in iterative solvers.
 
-\section{Methodology \textit{bad}}
-\subsection{Testing Strategy with gem5}
-\subsubsection{General Approach Description}
+\[
+y = A^T (A x)
+\]
 
-Tests were conducted using the gem5 simulator, enabling precise simulation of
-cache behavior across different hardware configurations. All workloads were
-compiled for x86 instruction set architecture, ensuring compatibility with the
-gem5 x86 simulator backend. For each workload, 31 distinct simulations were
-performed with varying cache configurations, enabling extensive analysis of
-cache parameters' impact on performance.
+From PolyBench~\cite{polybench:2016}:
+\[
+\text{Time: } O(n^2), \quad \text{Memory: } O(n^2)
+\]
 
-\subsubsection{Automation Framework (run\_all\_simulations.py)}
+The kernel combines row-major streaming accesses in the forward multiplication
+with column-wise accesses in the transpose phase, which results in mixed
+spatial locality and limited temporal reuse.
 
-The \texttt{run\_all\_simulations.py} script serves as the central orchestrator
-for simulations, implementing the following features:
+\subsubsection{Floyd-Warshall (All-Pairs Shortest Paths)} The Floyd-Warshall
+algorithm computes shortest paths between all pairs of vertices in a weighted
+graph using dynamic programming.\cite{floyd:1962}\cite{warshall:1962}
 
-\begin{itemize}
-	\item \textbf{Parallel Execution}: Uses \texttt{multiprocessing} to
-		distribute simulations across multiple processors, significantly
-		reducing total execution time
-	\item \textbf{Core Affinity}: Implements \textsc{cpu} pinning to improve
-		data locality and reduce measurement variability
-	\item \textbf{Output Synchronization}: Ensures logs from different
-		processes do not mix during parallel execution
-	\item \textbf{Completion Verification}: Automatically detects successful
-		simulations by the presence of \texttt{stats.txt} with critical metrics
-		(\texttt{simTicks}, \texttt{system.cpu.numCycles})
-\end{itemize}
+\[
+D_{ij}^{(k)} = \min\left(D_{ij}^{(k-1)},\; D_{ik}^{(k-1)} + D_{kj}^{(k-1)}\right)
+\]
 
-\subsubsection{Tested Cache Configurations}
+From PolyBench~\cite{polybench:2016}:
+\[
+\text{Time: } O(n^3), \quad \text{Memory: } O(n^2)
+\]
 
-Each workload was tested against 11 realistic cache configurations based on
-real commercial architectures:\footnote{For the Intel Atom and IBM POWER10
-configurations, cache sizes were adjusted to the nearest power-of-two values to
-ensure compatibility with the gem5 simulator.}
+The algorithm performs dense, regular accesses over a 2D matrix with strong
+temporal reuse across iterations of the outer loop.
 
-\begin{table}[h]
+\subsubsection{Jacobi-2D (Iterative Stencil Method)} The Jacobi-2D kernel
+applies an iterative stencil computation over a 2D grid, commonly used in
+numerical solutions of partial differential equations.\cite{golub:2013}
+
+\[
+A_{i,j}^{(t+1)} =
+\frac{1}{5}\left(
+A_{i,j}^{(t)} +
+A_{i-1,j}^{(t)} +
+A_{i+1,j}^{(t)} +
+A_{i,j-1}^{(t)} +
+A_{i,j+1}^{(t)}
+\right)
+\]
+
+From PolyBench~\cite{polybench:2016}:
+\[
+\text{Time: } O(n^3), \quad \text{Memory: } O(n^2)
+\]
+
+The kernel exhibits structured spatial locality due to stencil-based neighbor
+accesses, with moderate temporal locality across time steps.
+
+\subsubsection{Seidel-2D (Gauss--Seidel Stencil)} The Seidel-2D kernel
+implements an in-place stencil computation using a Gauss-Seidel update scheme,
+where newly computed values are immediately reused within the same iteration.
+
+\[
+A_{i,j} \leftarrow \frac{1}{9}
+\sum_{p=-1}^{1} \sum_{q=-1}^{1} A_{i+p,j+q}
+\]
+
+From PolyBench~\cite{polybench:2016}:
+\[
+\text{Time: } O(n^3), \quad \text{Memory: } O(n^2)
+\]
+
+Compared to Jacobi-2D, the in-place update introduces loop-carried
+dependencies, increasing temporal locality but reducing
+parallelism.\cite{golub:2013}
+
+\subsection{Collection of Metrics}
+
+Each workload was compiled as a statically linked 64-bit \textsc{elf}
+executable targeting the x86-64 \textit{isa} and the Linux system call
+interface. The musl C standard library~\cite{musl} was used to ensure minimal
+and deterministic runtime dependencies. All binaries were linked against gem5's
+\textit{libm5} library. Instrumentation points were inserted via the
+\textit{libm5} \textsc{api} to delimit the region of interest (\textsc{roi}).
+Specifically, gem5 annotation calls were placed immediately before and after
+the kernel invocation, which ensures precise control over when statistics
+collection begins and ends.
+
+\subsection{Datasets}\label{sub:dataset-size}
+
+PolyBench kernels are parameterized by dataset size through preprocessor
+definitions (e.g., \texttt{SMALL\_DATASET}, \texttt{MEDIUM\_DATASET},
+\texttt{LARGE\_DATASET}), with \texttt{LARGE\_DATASET} selected by default if
+none is specified. In this work, specifically, dataset sizes were explicitly
+configured per kernel in order to balance simulation fidelity with tractable
+execution time under detailed timing simulation. Table~\ref{tab:datasets}
+summarizes the selected dataset for each workload along with the corresponding
+problem dimensions.
+
+\begin{table}[htbp]
 	\centering
-	\caption{Tested cache configuration presets}
-	\begin{tabular}{|l|c|c|c|c|c|}
+	\caption{Dataset configurations used for each workload.}
+	\begin{tabular}{|l|c|c|}
 		\hline
-		\textbf{Preset}              & \textbf{L1I} & \textbf{L1D} & \textbf{L2} & \textbf{L3} \\
+		\textbf{Kernel} & \textbf{Dataset} & \textbf{Dimensions} \\
 		\hline
 		\hline
-		i7-6700K \textit{(baseline)} & 32 KiB       & 32 KiB       & 256 KiB     & 8 MiB       \\
-		Small Embedded               & 16 KiB       & 16 KiB       & 128 KiB     & 1 MiB       \\
-		Cortex A78                   & 32 KiB       & 32 KiB       & 512 KiB     & 4 MiB       \\
-		Intel Atom                   & 32 KiB       & 32 KiB       & 1 MiB       & 4 MiB       \\
-		IBM POWER10                  & 32 KiB       & 32 KiB       & 2 MiB       & 8 MiB       \\
-		Apple M1                     & 64 KiB       & 64 KiB       & 4 MiB       & 8 MiB       \\
-		i9-9900K                     & 32 KiB       & 32 KiB       & 256 KiB     & 16 MiB      \\
-		Ryzen 5600X                  & 32 KiB       & 32 KiB       & 512 KiB     & 32 MiB      \\
-		Apple M2                     & 64 KiB       & 64 KiB       & 4 MiB       & 16 MiB      \\
-		Ryzen 7700X                  & 32 KiB       & 32 KiB       & 1 MiB       & 32 MiB      \\
-		Large Server                 & 64 KiB       & 64 KiB       & 2 MiB       & 64 MiB      \\
+		\textsc{ata}x   & LARGE            & $M = 1900$, $N = 2100$ \\
+		\textsc{gemm}   & MEDIUM           & $N_I = 200$, $N_J = 220$, $N_K = 240$ \\
+		Floyd-Warshall  & SMALL            & $N = 180$ \\
+		Jacobi-2D       & MEDIUM           & $N = 250$, $T = 100$ \\
+		Seidel-2D       & MEDIUM           & $N = 400$, $T = 100$ \\
 		\hline
 	\end{tabular}
+	\label{tab:datasets}
 \end{table}
 
-\subsubsection{Additional Cache Parameters}
-
-In addition to size variations, the following configurations were tested:
-
-\begin{itemize}
-	\item \textbf{Cache Line Size}: 32, 64, 128, 256 bytes
-	\item \textbf{L1/L2 Associativity}: 1, 2, 4, 8, 16 ways
-\end{itemize}
-
-All cache dimensions and associativity values were rounded to powers of 2, as
-required by the gem5 simulator.
-
-Totaling 31 different variations per workload (11 base configurations + cache
-line variations + associativity variations).
-
-\subsubsection{Statistics Collection}
-
-Each simulation generates a \texttt{stats.txt} file containing:
-
-\begin{itemize}
-	\item \textbf{\textsc{cpu} Cycles}: Total number of simulation cycles
-	\item \textbf{Cache Hits/Misses}: Hit and miss rates at each cache level
-	\item \textbf{Latencies}: Average access time at different levels
-	\item \textbf{Throughput}: Instructions per cycle (\textsc{ipc})
-	\item \textbf{Memory Pressure}: System bandwidth utilization
-\end{itemize}
-
-Data are collected through gem5-specific calls:
-\begin{small}
-\begin{verbatim}
-m5_reset_stats(0, 0);   // Reset counters
-// Code of interest here
-m5_dump_stats(0, 0);    // Capture statistics
-\end{verbatim}
-\end{small}
-
-\subsection{Workload Description}\label{sub:workloads}
-
-\subsubsection{\textsc{gemm} (General Matrix Multiply - PolyBench)}
-
-\paragraph{Type}: Linear Algebra | \paragraph{Access Pattern}: Sequential with
-Tiling
-
-\paragraph{Description}
-
-\textsc{blas}-level implementation of generalized matrix multiplication: $C :=
-\alpha \cdot A \cdot B + \beta \cdot C$. Uses parameterized datasets from the
-PolyBench benchmark.
-
-\paragraph{Kernel Main}
-
-\begin{small}
-\begin{verbatim}
-for (i = 0; i < _PB_NI; i++) {
-  for (j = 0; j < _PB_NJ; j++)
-    C[i][j] *= beta;
-  for (k = 0; k < _PB_NK; k++) {
-    for (j = 0; j < _PB_NJ; j++)
-      C[i][j] += alpha * A[i][k] *
-                 B[k][j];
-  }
-}
-\end{verbatim}
-\end{small}
-
-\paragraph{Dimensions Used (MEDIUM\_DATASET)}
-
-\begin{itemize}
-	\item $NI = 200$ (rows of A)
-	\item $NJ = 220$ (columns of B)
-	\item $NK = 240$ (shared dimension)
-\end{itemize}
-
-\paragraph{Performance Characteristics}
-
-\begin{itemize}
-	\item \textbf{Temporal Locality}: Very High (C[i][j] reused multiple times)
-	\item \textbf{Spatial Locality}: High (access in tiling-friendly pattern)
-	\item \textbf{Cache Hit Rate}: Expected high, especially with cache
-		blocking
-	\item \textbf{Cache Sensitivity}: High - optimized configurations can
-		double performance
-\end{itemize}
-
-\paragraph{Mathematical Equation}
-
-\[C_{ij} = \beta \cdot C_{ij} + \alpha \sum_{k=0}^{NK-1} A_{ik} \cdot B_{kj}\]
-
-\paragraph{Complexity}
-
-\begin{itemize}
-	\item \textbf{Temporal}: $O(NI \times NJ \times NK) = O(200 \times 220
-		\times 240) = O(10.56 \times 10^{6})$ operations
-	\item \textbf{Spatial}: $O(NI \times NK + NK \times NJ + NI \times NJ)
-		\approx 1.1$ MB with double precision
-\end{itemize}
-
-\subsubsection{\textsc{ata}x (Matrix Transpose Vector - PolyBench)}
-
-\paragraph{Type}: Linear Algebra | \paragraph{Access Pattern}: Sequential with
-Transposition
-
-\paragraph{Description}
-
-Computes matrix transpose application followed by vector multiplication: $y :=
-A^T \cdot (A \cdot x) + z$. Demonstrates non-sequential access patterns in one
-dimension.
-
-\paragraph{Kernel Main}
-
-\begin{small}
-\begin{verbatim}
-for (i = 0; i < _PB_N; i++)
-  for (j = 0; j < _PB_M; j++)
-    y[j] += A[i][j] * x[i];
-
-for (i = 0; i < _PB_N; i++)
-  for (j = 0; j < _PB_M; j++)
-    z[i] += A[i][j] * y[j];
-\end{verbatim}
-\end{small}
-
-\paragraph{Dimensions Used (LARGE\_DATASET)}
-
-\begin{itemize}
-	\item $M = 1900$ (number of columns)
-	\item $N = 2100$ (number of rows)
-\end{itemize}
-
-\paragraph{Performance Characteristics}
-
-\begin{itemize}
-	\item \textbf{Temporal Locality}: Moderate (y and z redefinition in inner
-		loops)
-	\item \textbf{Spatial Locality}: Moderate-High (column access in second
-		stage)
-	\item \textbf{Cache Hit Rate}: Moderate - non-sequential access hurts cache
-	\item \textbf{Cache Sensitivity}: Moderate
-\end{itemize}
-
-\paragraph{Mathematical Equations}
-
-\[y_j = \sum_{i=0}^{N-1} A_{ij} \cdot x_i\]
-\[z_i = z_i + \sum_{j=0}^{M-1} A_{ij} \cdot y_j\]
-
-\subsubsection{Floyd-Warshall (Shortest Path - PolyBench)}
-
-\paragraph{Type}: Classic Algorithm | \paragraph{Access Pattern}: Complex Reuse
-
-\paragraph{Description}
-
-Classic dynamic programming algorithm for finding shortest paths between all
-pairs of vertices. Demonstrates complex data reuse pattern with three levels of
-nesting.
-
-\paragraph{Kernel Main}
-
-\begin{small}
-\begin{verbatim}
-for (k = 0; k < _PB_N; k++) {
-  for (i = 0; i < _PB_N; i++)
-    for (j = 0; j < _PB_N; j++)
-      path[i][j] = path[i][j] <
-        path[i][k] + path[k][j] ?
-        path[i][j] :
-        path[i][k] + path[k][j];
-}
-\end{verbatim}
-\end{small}
-
-\paragraph{Dimensions Used (SMALL\_DATASET)}
-
-\begin{itemize}
-	\item $N = 180$ (number of nodes)
-	\item Distance matrix: $180 \times 180$ elements
-\end{itemize}
-
-\paragraph{Performance Characteristics}
-
-\begin{itemize}
-	\item \textbf{Temporal Locality}: Very High (path[i][j], path[i][k],
-		path[k][j] reused)
-	\item \textbf{Spatial Locality}: High (access in dense 2D pattern)
-	\item \textbf{Cache Hit Rate}: High - working set fits in L3
-	\item \textbf{Cache Sensitivity}: High - L3 miss is very costly
-	\item \textbf{Access Pattern}: Streaming with reuse (layer-wise)
-\end{itemize}
-
-\paragraph{Complexity}
-
-\begin{itemize}
-	\item \textbf{Temporal}: $O(N^3) = O(180^3) \approx 5.8 \times 10^{6}$
-		comparisons
-	\item \textbf{Spatial}: $O(N^2) \approx 129.6$ \textsc{kb} for distance
-		matrix (integers)
-\end{itemize}
-
-\paragraph{Applications}
-
-Network routing, graph analysis, path length algorithms.
-
-\subsubsection{Jacobi-2D (Iterative Method - PolyBench)}
-
-\paragraph{Type}: Numerical Simulation | \paragraph{Access Pattern}: 2D Stencil
-
-\paragraph{Description}
-
-Implementation of the Jacobi iterative method for solving linear systems in 2D.
-Uses ``stencil'' access pattern where each point depends on its 5 neighbors
-(center, top, bottom, left, right).
-
-\paragraph{Kernel Main}
-
-\begin{small}
-\begin{verbatim}
-for (t = 0; t < _PB_TSTEPS; t++) {
-  for (i = 1; i < _PB_N-1; i++)
-    for (j = 1; j < _PB_N-1; j++)
-      B[i][j] = 0.2 * (A[i][j] +
-        A[i][j-1] + A[i][j+1] +
-        A[i+1][j] + A[i-1][j]);
-  for (i = 1; i < _PB_N-1; i++)
-    for (j = 1; j < _PB_N-1; j++)
-      A[i][j] = 0.2 * (B[i][j] +
-        B[i][j-1] + B[i][j+1] +
-        B[i+1][j] + B[i-1][j]);
-}
-\end{verbatim}
-\end{small}
-
-\paragraph{Dimensions Used (MEDIUM\_DATASET)}
-
-\begin{itemize}
-	\item Mesh: $250 \times 250$
-	\item Time iterations (TSTEPS): 100
-	\item Total operations: $\sim 6.25 \times 10^{6}$
-\end{itemize}
-
-\paragraph{Performance Characteristics}
-
-\begin{itemize}
-	\item \textbf{Temporal Locality}: Moderate-High (alternation between A and
-		B)
-	\item \textbf{Spatial Locality}: Very High (access to 5 neighbors close
-		together)
-	\item \textbf{Cache Hit Rate}: Very High - stencil fits in cache
-	\item \textbf{Cache Sensitivity}: Moderate (well-defined working set)
-	\item \textbf{Access Pattern}: Stencil with regular reuse
-\end{itemize}
-
-\paragraph{Computational Equation}
-
-\begin{multline*}
-B[i,j]^{(n)} = 0.2 \times (A[i,j]^{(n)} + A[i,j-1]^{(n)} + A[i,j+1]^{(n)} \\
-+ A[i+1,j]^{(n)} + A[i-1,j]^{(n)})
-\end{multline*}
-
-
-\paragraph{Applications}
-
-Heat transfer simulation, partial differential equation solving, computational
-fluid dynamics.
-
-\subsubsection{Seidel-2D (Gauss-Seidel - PolyBench)}
-
-\paragraph{Type}: Numerical Simulation | \paragraph{Access Pattern}: 2D Stencil
-with Convergence
-
-\paragraph{Description}
-
-Variant of the Jacobi method using Gauss-Seidel sweep, where each point uses
-already-updated values in the current iteration. Presents slight reduction in
-locality compared to Jacobi.
-
-\paragraph{Kernel Main}
-
-\begin{small}
-\begin{verbatim}
-for (t = 0; t <= _PB_TSTEPS-1; t++)
-  for (i = 1; i <= _PB_N-2; i++)
-    for (j = 1; j <= _PB_N-2; j++)
-      A[i][j] = (A[i-1][j-1] +
-        A[i-1][j] + A[i-1][j+1] +
-        A[i][j-1] + A[i][j] +
-        A[i][j+1] + A[i+1][j-1] +
-        A[i+1][j] + A[i+1][j+1])
-        / 9.0;
-\end{verbatim}
-\end{small}
-
-\paragraph{Dimensions Used (MEDIUM\_DATASET)}
-
-\begin{itemize}
-	\item Mesh: $400 \times 400$
-	\item Time iterations (TSTEPS): 100
-	\item Neighborhood pattern: 9 points (Moore neighborhood)
-\end{itemize}
-
-\paragraph{Performance Characteristics}
-
-\begin{itemize}
-	\item \textbf{Temporal Locality}: Moderate (limited reuse between
-		timesteps)
-	\item \textbf{Spatial Locality}: Very High (9 neighbors accessed
-		sequentially)
-	\item \textbf{Cache Hit Rate}: Very High - better than Jacobi in some
-		aspects
-	\item \textbf{Cache Sensitivity}: Moderate-High
-	\item \textbf{Access Pattern}: Dense stencil with 9 points
-\end{itemize}
-
-\paragraph{Computational Equation}
-
-\[A[i,j]^{(n+1)} = \frac{1}{9}\sum_{p=-1}^{1}\sum_{q=-1}^{1} A[i+p,j+q]^{(n)}\]
-
-\paragraph{Difference with Jacobi}
-
-Uses 9 points in Moore neighborhood versus 5 points in von Neumann
-neighborhood, resulting in larger data volume accessed but possibly better
-convergence.
-
-\subsection{Justification for Workload Selection}
-
-\begin{enumerate}
-	\item \textbf{PolyBench Suite}: Widely accepted benchmark set in the
-		academic community for scientific computing
-	\item \textbf{Diversity}: Covers access patterns from sequential to complex
-		global patterns
-	\item \textbf{Realism}: Reflect practical applications (simulations, linear
-		algebra, graph processing)
-	\item \textbf{Complete Coverage}: Encompass computational stencil, linear
-		algebra, and graph algorithms
-\end{enumerate}
-
-
-
+Preliminary simulations using the baseline cache configuration indicated, upon
+register inspection after partial simulation progress, that several kernels
+with the default \texttt{LARGE\_DATASET} would require prohibitively long
+execution times under cycle-accurate simulation. Dataset sizes were therefore
+reduced iteratively until each workload could complete within a practical time
+budget (on the order of days). In particular, Floyd-Warshall exhibits cubic
+time complexity with a large constant factor, which necessitated the use of the
+\texttt{SMALL\_DATASET} configuration.
 
 \section{Results}
 \subsection{Overview}
