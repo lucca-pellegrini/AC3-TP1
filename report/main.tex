@@ -544,17 +544,17 @@ already been fetched into the instruction cache and easily fits within its
 capacity: the relocatable object corresponding to the main translation unit of
 each workload is on the order of a few kilobytes.
 
-\subsubsection{Impact of dataset sizes} As we detailed in \ref{sub:workloads},
-different workloads were set to use different dataset size configurations due
-to time constraints. The \textsc{ata}x kernel was compiled with the
-LARGE\_DATASET definition, the Floyd-Warshall kernel with SMALL\_DATASET, and
-the remaining kernels with MEDIUM\_DATASET. This may explain why the
-\textsc{ata}x simulations exhibited the largest absolute jumps in
-\textsc{mpki}, miss rates, total latencies, and \textsc{cpi}, whereas
-Floyd-Warshall exhibited the smallest jumps: larger dataset sizes may increase
-working-set pressure, such that, if the working set is near the cache size
-boundary, changes in total cache capacity and line size may materially change
-miss behavior.
+\subsubsection{Impact of dataset sizes} As we detailed in
+\ref{sub:dataset-size}, different workloads were set to use different dataset
+size configurations due to time constraints. The \textsc{ata}x kernel was
+compiled with the \texttt{LARGE\_DATASET} definition, the Floyd-Warshall kernel
+with \texttt{SMALL\_DATASET}, and the remaining kernels with
+\texttt{MEDIUM\_DATASET}. This may explain why the \textsc{ata}x simulations
+exhibited the largest absolute jumps in \textsc{mpki}, miss rates, total
+latencies, and \textsc{cpi}, whereas Floyd-Warshall exhibited the smallest
+jumps: larger dataset sizes may increase working-set pressure, such that, if
+the working set is near the cache size boundary, changes in total cache
+capacity and line size may materially change miss behavior.
 
 \section{Conclusion}
 
