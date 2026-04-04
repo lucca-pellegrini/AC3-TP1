@@ -213,7 +213,7 @@ def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
     )
 
     try:
-        # Ensure gem5 finds libpython from the base interpreter used to build it
+        # Ensure gem5 finds libpython and Python packages (pydot) from the venv
         env = os.environ.copy()
         libdir = sysconfig.get_config_var("LIBDIR") or os.path.join(
             getattr(sys, "base_prefix", sys.prefix), "lib"
@@ -221,6 +221,15 @@ def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
         if libdir:
             ld = env.get("LD_LIBRARY_PATH", "")
             env["LD_LIBRARY_PATH"] = f"{libdir}:{ld}" if ld else libdir
+
+        # Make embedded Python in gem5 see the venv's site-packages
+        try:
+            purelib = sysconfig.get_paths().get("purelib")
+        except Exception:
+            purelib = None
+        if purelib:
+            pypath = env.get("PYTHONPATH", "")
+            env["PYTHONPATH"] = f"{purelib}:{pypath}" if pypath else purelib
 
         start_time = time.time()
         # No timeout - simulations can take days

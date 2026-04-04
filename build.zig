@@ -252,6 +252,7 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
         "make",
         "lualatex",
         "bibtex",
+        "dot",
     };
 
     var missing_count: u32 = 0;

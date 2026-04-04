@@ -28,3 +28,4 @@ SCons==4.10.1
 six==1.17.0
 typing_extensions==4.15.0
 virtualenv==21.2.0
+pydot==2.0.0
