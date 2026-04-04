@@ -91,10 +91,10 @@ Required (checked by `zig build check-deps`):
 
 ## Quick Start
 
-Clone recursively submodules:
+Clone release tag with gem5 submodule (shallow clone recommended for saving disk space):
 
 ```bash
-git clone --recurse-submodules https://github.com/lucca-pellegrini/AC3-TP1.git
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.0 --depth=1 --recursive --shallow-submodules
 cd AC3-TP1
 ```
 
