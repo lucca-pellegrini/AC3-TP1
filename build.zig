@@ -251,7 +251,6 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
         "git",
         "make",
         "lualatex",
-        "latexrun",
         "bibtex",
     };
 
