@@ -8,7 +8,7 @@ ETC        = Makefile references.bib
 FIG        = ../figures/*.pdf
 VER        = $(shell git describe --long --tags \
               | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')
-LATEX      = ../gem5/venv/bin/python latexrun --latex-cmd lualatex
+LATEX      = $(realpath ../gem5/venv/bin/python) latexrun --latex-cmd lualatex
 LATEXFLAGS = -O build
 CLEANFLAGS = --clean-all -O build
 RELEASE    = $(NAME)_$(VER)
