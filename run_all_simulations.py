@@ -20,6 +20,7 @@ from datetime import datetime
 from multiprocessing import Manager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import sysconfig
 
 try:
     import psutil as _psutil
@@ -212,9 +213,18 @@ def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
     )
 
     try:
+        # Ensure gem5 finds libpython from the base interpreter used to build it
+        env = os.environ.copy()
+        libdir = sysconfig.get_config_var("LIBDIR") or os.path.join(
+            getattr(sys, "base_prefix", sys.prefix), "lib"
+        )
+        if libdir:
+            ld = env.get("LD_LIBRARY_PATH", "")
+            env["LD_LIBRARY_PATH"] = f"{libdir}:{ld}" if ld else libdir
+
         start_time = time.time()
         # No timeout - simulations can take days
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, env=env)
         elapsed_time = time.time() - start_time
 
         if result.returncode == 0:
