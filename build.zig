@@ -456,6 +456,8 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
             const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
             defer allocator.free(py_bin);
+            const py_lib = std.fmt.allocPrint(allocator, "{s}/lib", .{py_prefix}) catch return error.OutOfMemory;
+            defer allocator.free(py_lib);
 
             const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
             defer if (old_path.len != 0) allocator.free(old_path);
@@ -465,11 +467,34 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
             defer allocator.free(new_path);
 
+            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
+            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
+            const new_ldlib = if (old_ldlib.len != 0)
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ py_lib, old_ldlib }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{py_lib}) catch return error.OutOfMemory);
+            defer allocator.free(new_ldlib);
+
+            const old_ldflags = std.process.getEnvVarOwned(allocator, "LDFLAGS") catch "";
+            defer if (old_ldflags.len != 0) allocator.free(old_ldflags);
+            const rpath_flag = std.fmt.allocPrint(allocator, "-Wl,-rpath,{s}", .{py_lib}) catch return error.OutOfMemory;
+            defer allocator.free(rpath_flag);
+            const new_ldflags = if (old_ldflags.len != 0)
+                (std.fmt.allocPrint(allocator, "LDFLAGS={s} {s}", .{ rpath_flag, old_ldflags }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LDFLAGS={s}", .{rpath_flag}) catch return error.OutOfMemory);
+            defer allocator.free(new_ldflags);
+
+            const pyconfig_env = std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory;
+            defer allocator.free(pyconfig_env);
+
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
                 new_path,
+                new_ldlib,
+                new_ldflags,
                 // Also provide explicit PYTHON_CONFIG for robustness
-                std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory,
+                pyconfig_env,
                 "./gem5/venv/bin/scons",
                 "-C",
                 "gem5",
@@ -525,6 +550,8 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
             const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
             const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
             defer allocator.free(py_bin);
+            const py_lib = std.fmt.allocPrint(allocator, "{s}/lib", .{py_prefix}) catch return error.OutOfMemory;
+            defer allocator.free(py_lib);
 
             const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
             defer if (old_path.len != 0) allocator.free(old_path);
@@ -534,11 +561,31 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
             defer allocator.free(new_path);
 
+            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
+            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
+            const new_ldlib = if (old_ldlib.len != 0)
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ py_lib, old_ldlib }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{py_lib}) catch return error.OutOfMemory);
+            defer allocator.free(new_ldlib);
+
+            const old_ldflags = std.process.getEnvVarOwned(allocator, "LDFLAGS") catch "";
+            defer if (old_ldflags.len != 0) allocator.free(old_ldflags);
+            const rpath_flag = std.fmt.allocPrint(allocator, "-Wl,-rpath,{s}", .{py_lib}) catch return error.OutOfMemory;
+            defer allocator.free(rpath_flag);
+            const new_ldflags = if (old_ldflags.len != 0)
+                (std.fmt.allocPrint(allocator, "LDFLAGS={s} {s}", .{ rpath_flag, old_ldflags }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LDFLAGS={s}", .{rpath_flag}) catch return error.OutOfMemory);
+            defer allocator.free(new_ldflags);
+
             const build_result = std.process.Child.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{
                     "env",
                     new_path,
+                    new_ldlib,
+                    new_ldflags,
                     std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory,
                     "./gem5/venv/bin/scons",
                     "-C",
