@@ -4,7 +4,7 @@
     NOTE: File written with help from LLMs!
 -->
 
-# ACIII: Quantitative Cache Evaluation with Gem5 & PolyBench
+# Artifact Repository for “A Quantitative Cache Evaluation of Select PolyBench Kernels”
 
 This repository contains the full submission for the course “Arquitetura de
 Computadores III” (Instituto de Ciências Exatas e Informática, Pontifícia
