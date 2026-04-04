@@ -195,22 +195,22 @@ extensible architectures.
 \subsection{Scope}
 
 The goal is to evaluate cache hierarchy metrics of representative compute
-kernels using gem5. We establish a three-level baseline cache configuration and
-simulate kernel executions while sweeping over orthogonal parameters one at a
-time. The first of these parameters is the cache hierarchy size, which is split
-into 11 presets (see Table~\ref{tbl:cachesizes}) roughly inspired by real
-commercial \textsc{cpu}s,\footnote{For the Intel Atom and IBM POWER10
-configurations, cache sizes were adjusted to the nearest power-of-two values to
-ensure compatibility with the gem5 simulator. Apple Silicon cache
-sizes are taken from the energy-efficiency cores.} where the Intel® Core™
-i7-6700K was chosen as the baseline. Next, we sweep the size of the cache lines
-over four power-of-two values, from 32 to 256 bytes, where the baseline is 64
-bytes; and finally we sweep  L1, L2, and L3 associativities individually over
-1-way (directly mapped), 2-way, 4-way, 8-way, and 16-way
-configurations,\footnote{A 12-way associativity configuration would be
-desirable, as it exists in the Zen~5 architecture, but gem5 expects
-power-of-two associativities.} where the baselines were 8-way for L1 and L2,
-and 16-way for L3.
+kernels using the gem5 architectural simulator\cite{gem5-20:2007}. We establish
+a three-level baseline cache configuration and simulate kernel executions while
+sweeping over orthogonal parameters one at a time. The first of these
+parameters is the cache hierarchy size, which is split into 11 presets (see
+Table~\ref{tbl:cachesizes}) roughly inspired by real commercial
+\textsc{cpu}s,\footnote{For the Intel Atom and IBM POWER10 configurations,
+cache sizes were adjusted to the nearest power-of-two values to ensure
+compatibility with the gem5 simulator. Apple Silicon cache sizes are taken from
+the energy-efficiency cores.} where the Intel® Core™ i7-6700K was chosen as the
+baseline. Next, we sweep the size of the cache lines over four power-of-two
+values, from 32 to 256 bytes, where the baseline is 64 bytes; and finally we
+sweep  L1, L2, and L3 associativities individually over 1-way (directly
+mapped), 2-way, 4-way, 8-way, and 16-way configurations,\footnote{A 12-way
+associativity configuration would be desirable, as it exists in the Zen~5
+architecture, but gem5 expects power-of-two associativities.} where the
+baselines were 8-way for L1 and L2, and 16-way for L3.
 
 \begin{table}[htbp]
 	\centering
@@ -235,6 +235,14 @@ and 16-way for L3.
 		\hline
 	\end{tabular}
 \end{table}
+
+The choice of gem5 over other simulators, such as Sniper, is motivated by its
+detailed and flexible modeling capabilities, as well as its broad support for
+multiple \textsc{isa}s. While Sniper prioritizes high-speed simulation through
+approximate interval-based models, gem5 enables cycle-accurate simulation and
+fine-grained control over microarchitectural components. This level of detail
+is helpful in isolating the effects of the cache parameters we seek to
+investigatem, and in collecting detailed metrics.
 
 The simulated gem5 system was configured to use a \textit{TimingSimpleCPU} with
 the x86 \textsc{isa}, an in-order model with memory access timing, chosen
