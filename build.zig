@@ -714,7 +714,7 @@ fn buildReport(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!vo
 
     const report_result = std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &[_][]const u8{ "make", "-C", "report/", "release" },
+        .argv = &[_][]const u8{ "make", "-C", "report/", "all" },
     }) catch |report_err| {
         std.debug.print("\x1b[1;31mFailed to build report: {}\x1b[0m\n", .{report_err});
         return report_err;
@@ -728,7 +728,7 @@ fn buildReport(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!vo
     }
 
     std.debug.print("  \x1b[1;32m✓ Report built successfully\x1b[0m\n", .{});
-    std.debug.print("  ⚡ \x1b[0mThe report is available in \x1b[1mreport/\x1b[0m\n", .{});
+    std.debug.print("  ⚡ \x1b[0mThe report is available in \x1b[1mreport/main.pdf\x1b[0m\n", .{});
 }
 
 fn printWorkloadsBuilt(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
