@@ -8,8 +8,8 @@ ETC        = Makefile references.bib
 FIG        = ../figures/*.pdf
 VER        = $(shell git describe --long --tags \
               | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')
-LATEX      = $(realpath ../gem5/venv/bin/python) latexrun --latex-cmd lualatex
-LATEXFLAGS = -O build
+LATEX      = $(realpath ../gem5/venv/bin/python) latexrun --latex-cmd pdflatex
+LATEXFLAGS = -O build -Wall
 CLEANFLAGS = --clean-all -O build
 RELEASE    = $(NAME)_$(VER)
 
@@ -23,11 +23,13 @@ clean:
 	$(LATEX) $(CLEANFLAGS)
 	$(RM) -r *.pdf *.ps *.idx *.bbl *.brf *.glo *.dvi *.toc *.lof *.aux \
 		*.log *.blg *.ilg *.ind *.out *.wsp *.fls *.synctex* *.zip  \
-		*.tar *.tar.gz *.tar.xz *.tar.zst *.*~ build/ latex.out/
+		*.tar *.tar.gz *.tar.xz *.tar.zst *.*~ .*.stamp build/
 
-$(MAIN).pdf: $(MAIN).tex $(ETC) $(FIG)
+$(MAIN).pdf: .$(MAIN).stamp
+
+.$(MAIN).stamp: $(MAIN).tex $(ETC) $(FIG)
 	$(LATEX) $(LATEXFLAGS) $(MAIN).tex
-	@touch $(MAIN).pdf
+	@touch $@
 
 $(RELEASE).pdf: $(MAIN).pdf
 	gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/prepress \
