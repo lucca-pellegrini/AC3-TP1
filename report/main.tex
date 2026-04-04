@@ -212,7 +212,7 @@ associativity configuration would be desirable, as it exists in the Zen~5
 architecture, but gem5 expects power-of-two associativities.} where the
 baselines were 8-way for L1 and L2, and 16-way for L3.
 
-\begin{table}[htbp]
+\begin{table}[!t]
 	\centering
 	\caption{Multi-level cache size presets}
 	\label{tbl:cachesizes}
@@ -403,7 +403,7 @@ tractable execution time under detailed timing simulation.
 Table~\ref{tab:datasets} summarizes the selected dataset for each workload
 along with the corresponding problem dimensions.
 
-\begin{table}[htbp]
+\begin{table}[!t]
 	\centering
 	\caption{Dataset configurations used for each workload.}
 	\begin{tabular}{|l|c|c|}
@@ -473,13 +473,13 @@ associativity effects were largely flat, and the capacity presets impact
 performance selectively, and only when dataset footprints\footnote{To be
 understood as the kernel's hot working set.} fit in the larger caches.
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
     \caption{\textsc{ipc} vs. cache line sizes across kernels}
     \includegraphics[width=\linewidth]{../figures/comparison_ipc_vs_cache_line.pdf}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
     \caption{L1D miss rate vs. cache line sizes across kernels}
     \includegraphics[width=\linewidth]{../figures/comparison_l1d_miss_rate_vs_cache_line.pdf}
@@ -502,7 +502,7 @@ probably correspond to a more dramatic \textsc{cpi} reduction.} Finally,
 Fig.~\ref{fig:gemm-cpi-line} shows modest \textsc{cpi} improvements for
 \textsc{gemm}, due to inherent temporal locality and compute intensity.
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
 	\caption{\textbf{\textsc{ata}x} relative speedup vs. cache line sizes.
 	Correlation indicates a strongly spatial, memory-sensitive kernel.}
@@ -510,7 +510,7 @@ Fig.~\ref{fig:gemm-cpi-line} shows modest \textsc{cpi} improvements for
     \includegraphics[width=\linewidth]{../figures/atax_speedup_vs_cache_line.pdf}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
     \caption{\textbf{Jacobi-2D} L3 \textsc{mpki} halve for each doubling of
     cache line size.}
@@ -518,7 +518,7 @@ Fig.~\ref{fig:gemm-cpi-line} shows modest \textsc{cpi} improvements for
     \includegraphics[width=\linewidth]{../figures/jacobi-2d_mpki_vs_cache_line.pdf}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
     \caption{\textbf{Seidel-2D} latency also decreases significantly for each
     doubling of cache line size.}
@@ -526,7 +526,7 @@ Fig.~\ref{fig:gemm-cpi-line} shows modest \textsc{cpi} improvements for
     \includegraphics[width=\linewidth]{../figures/seidel-2d_memory_stalls_vs_cache_line.pdf}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
 	\caption{\textbf{\textsc{gemm}} \textsc{cpi} shows gains are modest,
 	because kernel is compute-heavy with non-zero memory sensitivity.}
@@ -547,7 +547,7 @@ one (the cache is directly mapped), due to the fact that \textit{all} conflicts
 will lead to an eviction. This can be seen in Fig.~\ref{fig:comp-ipc-l1} as
 slightly lower instructions per cycle when the L1 caches are directly mapped.
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
 	\caption{\textsc{ipc} vs. L1 associativity across kernels shows negligible
 	impact on performance.}
@@ -568,7 +568,7 @@ Fig.~\ref{fig:comp-ipc-size} shows which workloads had most gains, and
 Fig.~\ref{fig:atax-speed-size} shows the effect on the \textsc{ata}x kernel,
 which had the most dramatic improvement.
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
 	\caption{$\Delta$\textsc{ipc} across cache configurations, showing that
 	only a subset produces noticeable gains.}
@@ -576,7 +576,7 @@ which had the most dramatic improvement.
     \includegraphics[width=\linewidth]{../figures/comparison_ipc_vs_cache_config.pdf}
 \end{figure}
 
-\begin{figure}[!htbp]
+\begin{figure}[!t]
     \centering
 	\caption{\textbf{\textsc{ata}x} speedup as total cache size grows was the
 	highest among all tested kernels.}
