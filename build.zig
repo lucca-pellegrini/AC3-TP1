@@ -435,7 +435,41 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const build_cmd = std.fmt.allocPrint(allocator, "-j{}", .{jobs}) catch return error.OutOfMemory;
             defer allocator.free(build_cmd);
 
+            // Ensure gem5 can find python*-config from the pyenv CPython install.
+            // venvs do not provide python3-config, and systems without a global
+            // python will fail unless we prepend the pyenv version's bin to PATH.
+            const prefix_res = std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &[_][]const u8{ "pyenv", "prefix", "3.14.3" },
+            }) catch |perr| {
+                std.debug.print("Failed to query pyenv prefix: {}\n", .{perr});
+                return perr;
+            };
+            defer allocator.free(prefix_res.stdout);
+            defer allocator.free(prefix_res.stderr);
+
+            if (prefix_res.term.Exited != 0) {
+                std.debug.print("Failed to query pyenv prefix:\n{s}\n", .{prefix_res.stderr});
+                return error.PythonInstallFailed;
+            }
+
+            const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
+            const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
+            defer allocator.free(py_bin);
+
+            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
+            defer if (old_path.len != 0) allocator.free(old_path);
+            const new_path = if (old_path.len != 0)
+                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ py_bin, old_path }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
+            defer allocator.free(new_path);
+
             var child = std.process.Child.init(&[_][]const u8{
+                "env",
+                new_path,
+                // Also provide explicit PYTHON_CONFIG for robustness
+                std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory,
                 "./gem5/venv/bin/scons",
                 "-C",
                 "gem5",
@@ -472,9 +506,40 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
         if (err == error.FileNotFound) {
             std.debug.print("\n\x1b[1;36m==> Building gem5 m5 control library...\x1b[0m\n", .{});
 
+            // Ensure python*-config is discoverable during m5 build as well.
+            const prefix_res = std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &[_][]const u8{ "pyenv", "prefix", "3.14.3" },
+            }) catch |perr| {
+                std.debug.print("Failed to query pyenv prefix: {}\n", .{perr});
+                return perr;
+            };
+            defer allocator.free(prefix_res.stdout);
+            defer allocator.free(prefix_res.stderr);
+
+            if (prefix_res.term.Exited != 0) {
+                std.debug.print("Failed to query pyenv prefix:\n{s}\n", .{prefix_res.stderr});
+                return error.PythonInstallFailed;
+            }
+
+            const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
+            const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
+            defer allocator.free(py_bin);
+
+            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
+            defer if (old_path.len != 0) allocator.free(old_path);
+            const new_path = if (old_path.len != 0)
+                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ py_bin, old_path }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
+            defer allocator.free(new_path);
+
             const build_result = std.process.Child.run(.{
                 .allocator = allocator,
                 .argv = &[_][]const u8{
+                    "env",
+                    new_path,
+                    std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory,
                     "./gem5/venv/bin/scons",
                     "-C",
                     "gem5/util/m5",
