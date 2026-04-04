@@ -118,6 +118,8 @@ and PDF report appear under `figures/` and `report/`.
 
 ## Incremental Workflow
 
+![Running pipeline up to workload compilation from a fresh clone](demo/workload-compilation-demo.gif)
+
 Each major step is addressable. You can run them individually and resume safely.
 
 ```bash
@@ -151,6 +153,8 @@ later; remaining items will continue.
 
 
 ## Running One-Off Simulations
+
+![Running all ATAx simulations with mini dataset using orchestrator](demo/atax-test-demo.gif)
 
 You can run gem5 directly with a specific parameter and workload. Examples:
 
