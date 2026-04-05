@@ -24,6 +24,10 @@ Target platform: Linux x86_64 only. While gem5 itself is portable, parts of the
 automation (pyenv setup and LaTeX/report build) are written for Linux.
 
 
+## Full Demonstration
+[![asciicast](https://asciinema.org/a/Iqcv0OSyuDhDmM5C.svg)](https://asciinema.org/a/Iqcv0OSyuDhDmM5C?t=75)
+
+
 ## What’s Here
 
 - [build.zig](build.zig): End-to-end build graph (Zig 0.15.2)
