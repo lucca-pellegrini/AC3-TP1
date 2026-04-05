@@ -42,7 +42,7 @@ automation (pyenv setup and LaTeX/report build) are written for Linux.
   - polybench.c (shared runtime)
 - [include/polybench.h](include/polybench.h): PolyBench configuration header
 - [report/](report/): IEEEtran paper sources; [report/main.tex](report/main.tex) is the manuscript
-- [gem5/](gem5/): gem5 submodule (initialized by the build)
+- [gem5/](https://github.com/gem5/gem5/tree/7a2b0e4): gem5 submodule (initialized by the build)
 
 
 ## Who Made This
