@@ -202,7 +202,7 @@ complete snapshot of the simulated system in `config.ini`, `config.json`, and
 `config.dot` along with a rendered `config.dot.pdf`. When a run finishes, the
 orchestrator drops a `.completed` marker so subsequent invocations can resume
 cleanly without redoing work. The plotting stage reads all runs from
-`results/`, writes publication figures to [figures/](figures/), and the paper
+`results/`, writes publication figures to `figures/`, and the paper
 ([report/main.tex](report/main.tex)) imports those figures directly.
 
 
