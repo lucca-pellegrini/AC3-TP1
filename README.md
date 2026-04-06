@@ -12,7 +12,7 @@ Universidade Católica de Minas Gerais), 2026/1, Prof. Matheus Alcântara Souza.
 
 It packages a complete, reproducible pipeline to study cache hierarchy
 sensitivities on a selected set of
-[PolyBench](https://web.cse.ohio-state.edu/~pouchet.2/software/polybench/)
+[PolyBench](https://www.cs.colostate.edu/~pouchet/software/polybench/)
 kernels using the [gem5](https://www.gem5.org) simulator. The pipeline is
 expressed in a single [Zig](https://ziglang.org) build graph that: checks
 host prerequisites; pins and bootstraps Python via pyenv; initializes and
