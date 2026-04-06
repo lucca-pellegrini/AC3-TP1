@@ -223,7 +223,7 @@ oversubscription and out‑of‑memory failures.
 Unless a file states otherwise, source code in this repository is licensed
 under the [ISC license](LICENSE) (see the SPDX headers). The report
 ([report/main.tex](report/main.tex) and the figures it includes) is distributed
-under [CC BY-SA 4.0](report/LICEENSE). The gem5 submodule remains under its own
+under [CC BY-SA 4.0](report/LICENSE). The gem5 submodule remains under its own
 upstream license, and the PolyBench workloads in [workloads/](workloads) remain
 under the [Ohio State University Software Distribution
 License](https://github.com/MatthiasJReisinger/PolyBenchC-4.2.1/blob/3e87254/LICENSE.txt).
