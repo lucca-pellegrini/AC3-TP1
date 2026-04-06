@@ -91,7 +91,7 @@ Required (checked by `zig build check-deps`):
   [SCons](https://scons.org/))
 - [pyenv](https://github.com/pyenv/pyenv) (the build pins Python to 3.14.3 inside gem5/venv)
 - git, make
-- LaTeX toolchain: [LuaLaTeX](https://www.luatex.org/), BibTeX, [latexrun](https://github.com/aclements/latexrun) (having a full TeX Live distribution is *strongly* recommended)
+- A full [TeX Live](https://tug.org/texlive/) distribution to generate the report
 - [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot` to PDF (the Python binding `pydot` is installed via `requirements.txt`)
 
 ## Quick Start
