@@ -1,46 +1,72 @@
 cff-version: 1.2.0
+title: >-
+  Artifact Repository for “A Quantitative Cache Evaluation
+  of Select PolyBench Kernels”
 message: >-
-  If you use this repository or reproduce its methodology, please cite the
-  accompanying course paper below.
-title: A Quantitative Cache Evaluation of Select PolyBench Kernels
-type: article
-year: 2026
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
 authors:
   - given-names: Amanda
     family-names: Canizela Guimarães
     email: amanda.canizela@gmail.com
-    affiliation: Instituto de Ciências Exatas e Informática, Pontifícia Universidade Católica de Minas Gerais
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
   - given-names: Ariel Inácio
     family-names: Jordão
     email: arielijordao@gmail.com
-    affiliation: Instituto de Ciências Exatas e Informática, Pontifícia Universidade Católica de Minas Gerais
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
   - given-names: Lucca
     family-names: Pellegrini
     email: lucca@verticordia.com
-    affiliation: Instituto de Ciências Exatas e Informática, Pontifícia Universidade Católica de Minas Gerais
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
   - given-names: Paulo
     family-names: Dimas
     email: paulo.junior.1478361@sga.pucminas.br
-    affiliation: Instituto de Ciências Exatas e Informática, Pontifícia Universidade Católica de Minas Gerais
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
   - given-names: Pedro Vitor
     family-names: Andrade
     email: pedrovitor0826@gmail.com
-    affiliation: Instituto de Ciências Exatas e Informática, Pontifícia Universidade Católica de Minas Gerais
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
+repository-code: 'https://github.com/lucca-pellegrini/AC3-TP1'
 abstract: >-
-  We present a systematic and reproducible evaluation of cache hierarchy
-  sensitivities across five PolyBench kernels using the gem5 simulator. Our
-  study separates realistic multi-level capacity presets from two orthogonal
-  parameters to isolate spatial and conflict effects. For each workload we
-  execute a controlled sweep and collect a standard set of per-level miss rates
-  and MPKI, total miss latency, IPC/CPI. Three findings emerge. First, cache
-  line size is the dominant factor: doubling the line often halves L1D miss
-  rate and improves IPC where memory stalls are non-trivial. Second,
-  associativity has minimal impact for these regular kernels, with the notable
-  exception of direct-mapped caches. Third, capacity presets matter selectively
-  when the hot working set approaches the LLC boundary; otherwise spatial
-  locality dominates. To strengthen reproducibility, we encode the full
-  pipeline in a single build graph with pinned versions for all components, and
-  statically link workloads. The resulting methodology and artifacts facilitate
-  transparent and repeatable cache design-space exploration, and provide a
-  baseline for future studies that consider larger datasets, alternative cache
-  policies, or out-of-order cores.
+  We present a systematic and reproducible evaluation of
+  cache hierarchy sensitivities across five PolyBench
+  kernels using the gem5 simulator. Our study separates
+  realistic multi-level capacity presets from two orthogonal
+  parameters to isolate spatial and conflict effects. For
+  each workload we execute a controlled sweep and collect a
+  standard set of per-level miss rates and MPKI, total miss
+  latency, IPC/CPI. Three findings emerge. First, cache line
+  size is the dominant factor: doubling the line often
+  halves L1D miss rate and improves IPC where memory stalls
+  are non-trivial. Second, associativity has minimal impact
+  for these regular kernels, with the notable exception of
+  direct-mapped caches. Third, capacity presets matter
+  selectively when the hot working set approaches the LLC
+  boundary; otherwise spatial locality dominates. To
+  strengthen reproducibility, we encode the full pipeline in
+  a single build graph with pinned versions for all
+  components, and statically link workloads. The resulting
+  methodology and artifacts facilitate transparent and
+  repeatable cache design-space exploration, and provide a
+  baseline for future studies that consider larger datasets,
+  alternative cache policies, or out-of-order cores.
+keywords:
+  - Memory hierarchy
+  - Cache memories
+  - Simulation
+  - Performance analysis and design aids
+  - Modeling of computer architecture
+license: ISC
+version: 0.1.0
+date-released: '2026-04-05'
