@@ -86,7 +86,7 @@ Dataset choices compiled into the real-run workloads:
 ## Prerequisites (Linux)
 
 Required (checked by `zig build check-deps`):
-- [Zig 0.15.2](https://ziglang.org) (`zig version`)
+- [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended)
 - [GCC/G++ 15.2.1](https://gcc.gnu.org/) (used by gem5/m5 via
   [SCons](https://scons.org/))
 - [pyenv](https://github.com/pyenv/pyenv) (the build pins Python to 3.14.3 inside gem5/venv)
