@@ -95,8 +95,14 @@ Required (checked by `zig build check-deps`):
   installation, since gem5 unfortunately will not accept Zig's internal Clang
 - [git](https://git-scm.com/), [make](https://www.gnu.org/software/make/),
   [m4](https://www.gnu.org/software/m4/m4.html)
-- A full [TeX Live](https://tug.org/texlive/) distribution to generate the report
-- [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot` to PDF (the Python binding `pydot` is installed via `requirements.txt`)
+- A full [TeX Live](https://tug.org/texlive/) distribution to generate the
+  report
+- [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot`
+  to PDF (the Python binding `pydot` is installed via `requirements.txt`)
+- *Optionally*, [Google Performance
+  Tools](https://github.com/gperftools/gperftools) for the
+  [`tcmalloc`](https://github.com/google/tcmalloc) implementation, which speeds
+  up gem5 a lot.
 
 ## Quick Start
 
