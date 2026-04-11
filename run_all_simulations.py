@@ -344,7 +344,7 @@ def main():
         description="Run all gem5 cache parameter variations for a workload"
     )
     parser.add_argument(
-        "gem5_exe", help="Path to gem5 executable (e.g., ./gem5/build/x86/gem5.opt)"
+        "gem5_exe", help="Path to gem5 executable (e.g., ./gem5/build/X86/gem5.fast)"
     )
     parser.add_argument("workload", help="Path to workload binary")
     parser.add_argument(
