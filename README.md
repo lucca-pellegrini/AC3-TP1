@@ -86,12 +86,12 @@ Dataset choices compiled into the real-run workloads:
 ## Prerequisites (Linux)
 
 Required (checked by `zig build check-deps`):
-- [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended)
-- [GCC/G++ 15.2.1](https://gcc.gnu.org/) (used by gem5/m5 via
-  [SCons](https://scons.org/))
+- [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended) - also
+  provides the C/C++ compiler via `zig cc`/`zig c++`
 - [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside
   gem5/venv)
-- git, make
+- [git](https://git-scm.com/), [make](https://www.gnu.org/software/make/),
+  [m4](https://www.gnu.org/software/m4/m4.html)
 - A full [TeX Live](https://tug.org/texlive/) distribution to generate the report
 - [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot` to PDF (the Python binding `pydot` is installed via `requirements.txt`)
 

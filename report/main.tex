@@ -444,11 +444,10 @@ Versions are pinned to minimize drift. Python is fixed to 3.14.3 via
 \texttt{uv}, and all Python packages are frozen in \texttt{requirements.txt}.
 The gem5 source is vendored as a Git submodule and built at the exact recorded
 commit (\texttt{7a2b0e4}). Workloads are statically linked x86-64 \textsc{elf}
-binaries against musl to reduce host-library variance. The only component not
-strictly pinned is the C toolchain; we run simulations with GCC version~\(\geq
-14\) and observe no material effect on the comparative cache trends within that
-range. All invocations of gem5, simulations, and analysis are routed through
-the project \texttt{venv} to ensure a consistent runtime across machines.
+binaries against musl to reduce host-library variance. The C/C++ toolchain is
+provided by Zig's bundled Clang (\texttt{zig~cc}/\texttt{zig~c++}). All
+invocations of gem5, simulations, and analysis are routed through the project
+\texttt{venv} to ensure a consistent runtime across machines.
 
 Simulations are dispatched by a single Python orchestration script that
 enumerates the parameter grid, manages a worker pool, can pin workers to
