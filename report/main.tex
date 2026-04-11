@@ -435,13 +435,13 @@ time complexity with a large constant factor, which necessitated the use of the
 We express the end-to-end workflow as an ordered, idempotent build graph in the
 Zig Build System (tied to Zig version~0.15.2~\cite{zig:2024}). The graph
 encodes, in dependency order: dependency checks; a pinned Python runtime via
-\texttt{pyenv} and a project virtual environment; gem5 submodule initialization
+\texttt{uv} and a project virtual environment; gem5 submodule initialization
 and compilation; the \textit{libm5} library build; workload compilation and
 linking; the complete simulation sweep; figure generation; and the final
 \LaTeX{} report build.
 
 Versions are pinned to minimize drift. Python is fixed to 3.14.3 via
-\texttt{pyenv}, and all Python packages are frozen with \texttt{pip~freeze}.
+\texttt{uv}, and all Python packages are frozen in \texttt{requirements.txt}.
 The gem5 source is vendored as a Git submodule and built at the exact recorded
 commit (\texttt{7a2b0e4}). Workloads are statically linked x86-64 \textsc{elf}
 binaries against musl to reduce host-library variance. The only component not

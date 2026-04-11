@@ -15,13 +15,13 @@ sensitivities on a selected set of
 [PolyBench](https://www.cs.colostate.edu/~pouchet/software/polybench/)
 kernels using the [gem5](https://www.gem5.org) simulator. The pipeline is
 expressed in a single [Zig](https://ziglang.org) build graph that: checks
-host prerequisites; pins and bootstraps Python via pyenv; initializes and
-builds the vendored gem5 submodule; compiles statically linked workloads; runs
-an exhaustive, parameterized simulation sweep; generates figures; and builds
-the final LaTeX report.
+host prerequisites; pins and bootstraps Python via uv; initializes and builds
+the vendored gem5 submodule; compiles statically linked workloads; runs an
+exhaustive, parameterized simulation sweep; generates figures; and builds the
+final LaTeX report.
 
 Target platform: Linux x86_64 only. While gem5 itself is portable, parts of the
-automation (pyenv setup and LaTeX/report build) are written for Linux.
+automation (uv/Python setup and LaTeX/report build) are written for Linux.
 
 
 ## Full Demonstration
@@ -89,7 +89,8 @@ Required (checked by `zig build check-deps`):
 - [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended)
 - [GCC/G++ 15.2.1](https://gcc.gnu.org/) (used by gem5/m5 via
   [SCons](https://scons.org/))
-- [pyenv](https://github.com/pyenv/pyenv) (the build pins Python to 3.14.3 inside gem5/venv)
+- [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside
+  gem5/venv)
 - git, make
 - A full [TeX Live](https://tug.org/texlive/) distribution to generate the report
 - [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot` to PDF (the Python binding `pydot` is installed via `requirements.txt`)
@@ -128,7 +129,7 @@ and PDF report appear under `figures/` and `report/`.
 Each major step is addressable. You can run them individually and resume safely.
 
 ```bash
-# 1) Prepare Python (pyenv + venv + pip install -r requirements.txt)
+# 1) Prepare Python (uv + venv + requirements.txt)
 zig build setup-python
 
 # 2) Initialize gem5 submodule
@@ -208,14 +209,14 @@ cleanly without redoing work. The plotting stage reads all runs from
 
 ## Reproducibility Choices
 
-To minimize drift, the build pins Python 3.14.3 via pyenv and installs all
-Python tooling (SCons, plotting libraries, and friends) into `gem5/venv`.
-The gem5 source is vendored as a Git submodule at a fixed commit and is always
-built through that virtual environment’s SCons. Workloads target
-`x86_64-linux-musl` and are linked statically to reduce host‑dependency
-variance (see [musl](https://musl.libc.org)). The simulation runner is
-deterministic and resumable; it caps parallelism at `min(9, nproc)` to avoid
-oversubscription and out‑of‑memory failures.
+To minimize drift, the build pins Python 3.14.3 via uv and installs all Python
+tooling (SCons, plotting libraries, and friends) into `gem5/venv`. The gem5
+source is vendored as a Git submodule at a fixed commit and is always built
+through that virtual environment’s SCons. Workloads target `x86_64-linux-musl`
+and are linked statically to reduce host‑dependency variance (see
+[musl](https://musl.libc.org)). The simulation runner is deterministic and
+resumable; it caps parallelism at `min(9, nproc)` to avoid oversubscription and
+out‑of‑memory failures.
 
 
 ## Licensing
