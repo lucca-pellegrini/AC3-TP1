@@ -1,7 +1,7 @@
 {
   "typeCheckingMode": "strict",
   "extraPaths": [
-    "build/ALL/python",
+    "build/x86/python",
     "typings"
   ],
   "executionEnvironments": [

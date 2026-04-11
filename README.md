@@ -144,7 +144,7 @@ zig build setup-python
 # 2) Initialize gem5 submodule
 zig build init-gem5
 
-# 3) Build gem5 simulator (gem5/build/ALL/gem5.opt)
+# 3) Build gem5 simulator (gem5/build/x86/gem5.opt)
 zig build gem5
 
 # 4) Build the m5 control library (libm5.a)
@@ -175,17 +175,17 @@ You can run gem5 directly with a specific parameter and workload. Examples:
 
 ```bash
 # Baseline config for jacobi-2d
-./gem5/build/ALL/gem5.opt \
+./gem5/build/x86/gem5.opt \
   -d results/jacobi-2d_baseline -- \
   cache_config.py ./zig-out/bin/jacobi-2d
 
 # Try a different cache line size for atax
-./gem5/build/ALL/gem5.opt \
+./gem5/build/x86/gem5.opt \
   -d results/atax_cache_line_128 -- \
   cache_config.py --cache-line-size=128 ./zig-out/bin/atax
 
 # Use a tiny debug binary (MINI dataset) to smoke-test the flow
-./gem5/build/ALL/gem5.opt \
+./gem5/build/x86/gem5.opt \
   -d results/seidel-2d_testline_64 -- \
   cache_config.py --cache-line-size=64 ./zig-out/bin/seidel-2d-test
 ```
@@ -195,12 +195,12 @@ Or invoke the orchestrator for just one workload:
 ```bash
 # Run all 31 configs for gemm with 4 workers and CPU pinning (requires psutil)
 ./gem5/venv/bin/python run_all_simulations.py \
-  --results-dir=results ./gem5/build/ALL/gem5.opt ./zig-out/bin/gemm \
+  --results-dir=results ./gem5/build/x86/gem5.opt ./zig-out/bin/gemm \
   -j 4 --pin-workers
 
 # Dry-run to see what would execute (no simulations are launched)
 ./gem5/venv/bin/python run_all_simulations.py \
-  --dry-run --results-dir=results ./gem5/build/ALL/gem5.opt ./zig-out/bin/jacobi-2d
+  --dry-run --results-dir=results ./gem5/build/x86/gem5.opt ./zig-out/bin/jacobi-2d
 ```
 
 

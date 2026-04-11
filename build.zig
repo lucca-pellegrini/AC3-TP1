@@ -467,7 +467,7 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
     const allocator = b.allocator;
 
     // Build gem5 simulator if not already built
-    const gem5_binary = "gem5/build/ALL/gem5.opt";
+    const gem5_binary = "gem5/build/X86/gem5.opt";
     if (std.fs.cwd().statFile(gem5_binary)) |_| {} else |err| {
         if (err == error.FileNotFound) {
             std.debug.print("\n\x1b[1;36m==> Building gem5 simulator...\x1b[0m\n", .{});
@@ -553,7 +553,7 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 "-C",
                 "gem5",
                 "--ignore-style",
-                "gem5/build/ALL/gem5.opt",
+                "gem5/build/X86/gem5.opt",
                 build_cmd,
             }, allocator);
             child.stdout_behavior = .Inherit;
@@ -703,7 +703,7 @@ fn runSimulations(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 "./gem5/venv/bin/python",
                 "./run_all_simulations.py",
                 "--results-dir=results",
-                "gem5/build/ALL/gem5.opt",
+                "gem5/build/X86/gem5.opt",
                 workload_path,
                 jobs_str,
                 "--pin-workers",
