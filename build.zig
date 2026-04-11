@@ -258,10 +258,14 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
 
     var missing_count: u32 = 0;
 
+    // Use POSIX "command -v" via sh instead of non-portable "which"
     for (required_commands) |cmd| {
+        const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch continue;
+        defer allocator.free(check_cmd);
+
         const result = std.process.Child.run(.{
             .allocator = allocator,
-            .argv = &[_][]const u8{ "which", cmd },
+            .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
         }) catch |err| {
             std.debug.print("  \x1b[1;31m✗ {s}: not found\x1b[0m (error: {})\n", .{ cmd, err });
             missing_count += 1;
@@ -281,7 +285,13 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
     if (missing_count > 0) {
         std.debug.print("\n\x1b[1;31mMissing dependencies:\x1b[0m\n", .{});
         for (required_commands) |cmd| {
-            const r = std.process.Child.run(.{ .allocator = allocator, .argv = &[_][]const u8{ "which", cmd } }) catch null;
+            const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch continue;
+            defer allocator.free(check_cmd);
+
+            const r = std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
+            }) catch null;
             if (r) |res| {
                 defer allocator.free(res.stdout);
                 defer allocator.free(res.stderr);
