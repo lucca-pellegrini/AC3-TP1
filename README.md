@@ -109,7 +109,7 @@ Required (checked by `zig build check-deps`):
 Clone release tag with gem5 submodule (shallow clone recommended for saving disk space):
 
 ```bash
-git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.0 --depth=1 --recursive --shallow-submodules
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.1 --depth=1 --recursive --shallow-submodules
 cd AC3-TP1
 ```
 
