@@ -244,11 +244,12 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
     std.debug.print("\x1b[1;36m==> Checking dependencies...\x1b[0m\n", .{});
 
     // List of required commands
-    // Note: cc/c++ not required - we use zig cc/c++ via CC/CXX env vars
+    // Note: cc/c++ not required - we use zig cc/c++ via clang wrappers
     const required_commands = [_][]const u8{
         "uv",
         "git",
         "make",
+        "m4", // Required by gem5 build
         "pdflatex",
         "bibtex",
         "dot",
