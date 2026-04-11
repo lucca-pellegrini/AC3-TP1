@@ -248,6 +248,7 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
         "uv",
         "cc",
         "c++",
+        "m4",
         "git",
         "make",
         "pdflatex",
