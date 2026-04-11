@@ -244,10 +244,9 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
     std.debug.print("\x1b[1;36m==> Checking dependencies...\x1b[0m\n", .{});
 
     // List of required commands
+    // Note: cc/c++ not required - we use zig cc/c++ via CC/CXX env vars
     const required_commands = [_][]const u8{
         "uv",
-        "cc",
-        "c++",
         "git",
         "make",
         "pdflatex",
@@ -529,10 +528,20 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
             defer allocator.free(path_env);
 
+            // Use zig cc/c++ as the C/C++ compilers (Clang-based, no system GCC needed)
+            const zig_path = std.fs.selfExeDirPathAlloc(allocator) catch return error.OutOfMemory;
+            defer allocator.free(zig_path);
+            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/zig cc", .{zig_path}) catch return error.OutOfMemory;
+            defer allocator.free(cc_env);
+            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/zig c++", .{zig_path}) catch return error.OutOfMemory;
+            defer allocator.free(cxx_env);
+
             std.debug.print("  {s}\n", .{ldlib_env});
             std.debug.print("  {s}\n", .{ldflags_env});
             std.debug.print("  {s}\n", .{pyconfig_env});
             std.debug.print("  {s}\n", .{path_env});
+            std.debug.print("  {s}\n", .{cc_env});
+            std.debug.print("  {s}\n", .{cxx_env});
 
             const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(scons_path);
@@ -543,10 +552,13 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 ldlib_env,
                 ldflags_env,
                 pyconfig_env,
+                cc_env,
+                cxx_env,
                 scons_path,
                 "-C",
                 "gem5",
                 "--ignore-style",
+                "--without-tcmalloc", // tcmalloc doesn't work with musl libc
                 "gem5/build/ALL/gem5.opt",
                 build_cmd,
             }, allocator);
@@ -616,6 +628,14 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
             defer allocator.free(path_env);
 
+            // Use zig cc/c++ as the C/C++ compilers (Clang-based, no system GCC needed)
+            const zig_path = std.fs.selfExeDirPathAlloc(allocator) catch return error.OutOfMemory;
+            defer allocator.free(zig_path);
+            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/zig cc", .{zig_path}) catch return error.OutOfMemory;
+            defer allocator.free(cc_env);
+            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/zig c++", .{zig_path}) catch return error.OutOfMemory;
+            defer allocator.free(cxx_env);
+
             const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(scons_path);
 
@@ -625,6 +645,8 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 ldlib_env,
                 ldflags_env,
                 pyconfig_env,
+                cc_env,
+                cxx_env,
                 scons_path,
                 "-C",
                 "gem5/util/m5",
