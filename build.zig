@@ -4,6 +4,55 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+// Dependency information: which commands are needed for which targets
+const DepInfo = struct {
+    cmd: []const u8,
+    description: []const u8,
+    required_for: []const []const u8, // List of targets that REQUIRE this dependency
+};
+
+const all_dependencies = [_]DepInfo{
+    // Core build dependencies (needed for gem5/m5/workloads)
+    .{ .cmd = "uv", .description = "Python environment manager", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
+    .{ .cmd = "cc", .description = "C compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
+    .{ .cmd = "c++", .description = "C++ compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
+    .{ .cmd = "m4", .description = "Macro processor", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
+
+    // Git is only needed for submodule initialization
+    .{ .cmd = "git", .description = "Version control (for gem5 submodule)", .required_for = &.{"init-gem5"} },
+
+    // Report-only dependencies
+    .{ .cmd = "make", .description = "Build automation (for report)", .required_for = &.{"report"} },
+    .{ .cmd = "pdflatex", .description = "LaTeX compiler (for report)", .required_for = &.{"report"} },
+    .{ .cmd = "bibtex", .description = "Bibliography processor (for report)", .required_for = &.{"report"} },
+
+    // Visualization dependency
+    .{ .cmd = "dot", .description = "Graph visualization (for diagrams)", .required_for = &.{"simulations"} },
+};
+
+// Targets and their transitive dependencies (what targets they depend on)
+const target_deps = struct {
+    fn get(target: []const u8) []const []const u8 {
+        const map = .{
+            .{ "check-deps", &[_][]const u8{} },
+            .{ "setup-python", &[_][]const u8{"check-deps"} },
+            .{ "init-gem5", &[_][]const u8{"check-deps"} },
+            .{ "gem5", &[_][]const u8{ "setup-python", "init-gem5" } },
+            .{ "m5", &[_][]const u8{ "setup-python", "init-gem5" } },
+            .{ "workloads", &[_][]const u8{"m5"} },
+            .{ "simulations", &[_][]const u8{ "gem5", "workloads" } },
+            .{ "visualize", &[_][]const u8{"simulations"} },
+            .{ "report", &[_][]const u8{"visualize"} },
+            .{ "default", &[_][]const u8{"workloads"} },
+            .{ "analyze", &[_][]const u8{} },
+        };
+        inline for (map) |entry| {
+            if (std.mem.eql(u8, target, entry[0])) return entry[1];
+        }
+        return &[_][]const u8{};
+    }
+};
+
 pub fn build(b: *std.Build) void {
     // Target with static linking to avoid cross-platform simulation issues.
     const target = b.standardTargetOptions(.{
@@ -237,73 +286,157 @@ pub fn build(b: *std.Build) void {
     b.default_step = build_workloads;
 }
 
+/// Check if a command exists in PATH
+fn checkCmd(allocator: std.mem.Allocator, cmd: []const u8) bool {
+    const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch return false;
+    defer allocator.free(check_cmd);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
+    }) catch return false;
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+
+    return result.term.Exited == 0;
+}
+
+const known_targets = [_][]const u8{
+    "report",
+    "visualize",
+    "simulations",
+    "workloads",
+    "gem5",
+    "m5",
+    "init-gem5",
+    "setup-python",
+    "check-deps",
+    "analyze",
+    "install",
+};
+
+// Static buffer for target results (persists across function calls)
+var target_result_buffer: [16][]const u8 = undefined;
+var target_result_count: usize = 0;
+
+/// Recursively find root targets (steps with no dependants) starting from given step
+fn findRootTargets(step: *std.Build.Step) void {
+    // If this step has no dependants, it might be a root target
+    if (step.dependants.items.len == 0) {
+        const step_name = step.name;
+        for (known_targets) |target| {
+            if (std.mem.eql(u8, step_name, target)) {
+                // Avoid duplicates
+                var found = false;
+                for (target_result_buffer[0..target_result_count]) |existing| {
+                    if (std.mem.eql(u8, existing, target)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found and target_result_count < target_result_buffer.len) {
+                    target_result_buffer[target_result_count] = target;
+                    target_result_count += 1;
+                }
+                return;
+            }
+        }
+        return;
+    }
+
+    // Recurse up to dependants
+    for (step.dependants.items) |dependant| {
+        findRootTargets(dependant);
+    }
+}
+
+/// Determine the target being built by walking up the dependency graph
+fn getRequestedTargets(step: *std.Build.Step) []const []const u8 {
+    // Reset the static buffer
+    target_result_count = 0;
+
+    findRootTargets(step);
+
+    // Map "install" to "default" (workloads)
+    for (target_result_buffer[0..target_result_count], 0..) |target, i| {
+        if (std.mem.eql(u8, target, "install")) {
+            target_result_buffer[i] = "default";
+        }
+    }
+
+    // If nothing specific, assume default (workloads)
+    if (target_result_count == 0) {
+        return &[_][]const u8{"default"};
+    }
+
+    return target_result_buffer[0..target_result_count];
+}
+
+/// Check if a dependency is required for any of the given targets (including transitive deps)
+fn isRequiredFor(dep: DepInfo, targets: []const []const u8) bool {
+    for (targets) |target| {
+        // Check direct requirement
+        for (dep.required_for) |req_target| {
+            if (std.mem.eql(u8, req_target, target)) return true;
+        }
+        // Check transitive dependencies
+        const transitive = target_deps.get(target);
+        for (transitive) |trans_target| {
+            for (dep.required_for) |req_target| {
+                if (std.mem.eql(u8, req_target, trans_target)) return true;
+            }
+        }
+    }
+    return false;
+}
+
 fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
     const b = step.owner;
     const allocator = b.allocator;
 
     std.debug.print("\x1b[1;36m==> Checking dependencies...\x1b[0m\n", .{});
 
-    // List of required commands
-    const required_commands = [_][]const u8{
-        "uv",
-        "cc",
-        "c++",
-        "m4",
-        "git",
-        "make",
-        "pdflatex",
-        "bibtex",
-        "dot",
-    };
+    // Determine what targets are being built
+    const requested_targets = getRequestedTargets(step);
 
-    var missing_count: u32 = 0;
+    var hard_missing: u32 = 0;
+    var soft_missing: u32 = 0;
 
-    // Use POSIX "command -v" via sh instead of non-portable "which"
-    for (required_commands) |cmd| {
-        const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch continue;
-        defer allocator.free(check_cmd);
+    for (all_dependencies) |dep| {
+        const found = checkCmd(allocator, dep.cmd);
+        const is_required = isRequiredFor(dep, requested_targets);
 
-        const result = std.process.Child.run(.{
-            .allocator = allocator,
-            .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
-        }) catch |err| {
-            std.debug.print("  \x1b[1;31m✗ {s}: not found\x1b[0m (error: {})\n", .{ cmd, err });
-            missing_count += 1;
-            continue;
-        };
-        defer allocator.free(result.stdout);
-        defer allocator.free(result.stderr);
-
-        if (result.term.Exited != 0) {
-            std.debug.print("  \x1b[1;31m✗ {s}: not found\x1b[0m\n", .{cmd});
-            missing_count += 1;
+        if (found) {
+            std.debug.print("  \x1b[1;32m✓ {s}\x1b[0m: found\n", .{dep.cmd});
+        } else if (is_required) {
+            // Hard error - required for current target
+            std.debug.print("  \x1b[1;31m✗ {s}\x1b[0m: not found - \x1b[1;31mREQUIRED\x1b[0m ({s})\n", .{ dep.cmd, dep.description });
+            hard_missing += 1;
         } else {
-            std.debug.print("  \x1b[1;32m✓ {s}: found\x1b[0m\n", .{cmd});
+            // Soft warning - not needed for current target
+            std.debug.print("  \x1b[1;33m⚠ {s}\x1b[0m: not found - needed for: ", .{dep.cmd});
+            for (dep.required_for, 0..) |target, i| {
+                if (i > 0) std.debug.print(", ", .{});
+                std.debug.print("{s}", .{target});
+            }
+            std.debug.print(" ({s})\n", .{dep.description});
+            soft_missing += 1;
         }
     }
 
-    if (missing_count > 0) {
-        std.debug.print("\n\x1b[1;31mMissing dependencies:\x1b[0m\n", .{});
-        for (required_commands) |cmd| {
-            const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch continue;
-            defer allocator.free(check_cmd);
-
-            const r = std.process.Child.run(.{
-                .allocator = allocator,
-                .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
-            }) catch null;
-            if (r) |res| {
-                defer allocator.free(res.stdout);
-                defer allocator.free(res.stderr);
-                if (res.term.Exited != 0) {
-                    std.debug.print("  - {s}\n", .{cmd});
-                }
-            } else {
-                std.debug.print("  - {s}\n", .{cmd});
+    if (hard_missing > 0) {
+        std.debug.print("\n\x1b[1;31mMissing required dependencies ({} required, {} optional):\x1b[0m\n", .{ hard_missing, soft_missing });
+        for (all_dependencies) |dep| {
+            if (!checkCmd(allocator, dep.cmd) and isRequiredFor(dep, requested_targets)) {
+                std.debug.print("  - {s} ({s})\n", .{ dep.cmd, dep.description });
             }
         }
         std.debug.print("\n\x1b[1mPlease install the missing dependencies before continuing.\x1b[0m\n", .{});
         return error.MissingDependencies;
+    }
+
+    if (soft_missing > 0) {
+        std.debug.print("\n\x1b[1;33mNote:\x1b[0m {d} optional dependencies not found (not needed for current target)\n", .{soft_missing});
     }
 }
 
