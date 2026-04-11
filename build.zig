@@ -316,7 +316,7 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     // Ensure CPython 3.14.3 is available (managed by uv)
     {
         std.debug.print("\x1b[1mEnsuring Python 3.14.3 is installed...\x1b[0m\n", .{});
-        var child = std.process.Child.init(&[_][]const u8{ "uv", "python", "install", "3.14.3" }, allocator);
+        var child = std.process.Child.init(&[_][]const u8{ "uv", "--quiet", "python", "install", "3.14.3" }, allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
         const term = child.spawnAndWait() catch |err| {
@@ -336,7 +336,7 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
 
         std.debug.print("\x1b[1mCreating Python virtual environment...\x1b[0m\n", .{});
         var child = std.process.Child.init(&[_][]const u8{
-            "uv", "venv", "--python", "3.14.3", "gem5/venv",
+            "uv", "venv", "--quiet", "--python", "3.14.3", "gem5/venv",
         }, allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
@@ -354,7 +354,7 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     {
         std.debug.print("\x1b[1mInstalling Python dependencies...\x1b[0m\n", .{});
         var child = std.process.Child.init(&[_][]const u8{
-            "uv", "pip", "install", "--python", "gem5/venv", "-r", "requirements.txt",
+            "uv", "pip", "--no-progress", "install", "--python", "gem5/venv", "-r", "requirements.txt",
         }, allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
