@@ -4,48 +4,72 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-// Dependency information: which commands are needed for which targets
+// Possible targets for the build
+const known_targets = [_][]const u8{
+    "report",
+    "visualize",
+    "simulations",
+    "workloads",
+    "gem5",
+    "m5",
+    "init-gem5",
+    "setup-python",
+    "check-deps",
+    "analyze",
+    "install",
+};
+
+// Struct representing Python version and installation information
+const PythonInfo = struct {
+    base_prefix: []const u8,
+    libdir: []const u8,
+    ver_mm: []const u8, // e.g. "3.14"
+
+    fn deinit(self: *const PythonInfo, allocator: std.mem.Allocator) void {
+        allocator.free(self.base_prefix);
+        allocator.free(self.libdir);
+        allocator.free(self.ver_mm);
+    }
+};
+
+// Struct describing each executable dependency, what it does, and what it's
+// needed by.
 const DepInfo = struct {
     cmd: []const u8,
     description: []const u8,
-    required_for: []const []const u8, // List of targets that REQUIRE this dependency
+    required_for: []const []const u8,
 };
 
+// List of all needed commands, and why they're needed
 const all_dependencies = [_]DepInfo{
-    // Core build dependencies (needed for gem5/m5/workloads)
+    .{ .cmd = "git", .description = "Version control (for gem5 submodule)", .required_for = &.{"init-gem5"} },
     .{ .cmd = "uv", .description = "Python environment manager", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "cc", .description = "C compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "c++", .description = "C++ compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "m4", .description = "Macro processor", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
-
-    // Git is only needed for submodule initialization
-    .{ .cmd = "git", .description = "Version control (for gem5 submodule)", .required_for = &.{"init-gem5"} },
-
-    // Report-only dependencies
+    .{ .cmd = "dot", .description = "Graph visualization (for diagrams)", .required_for = &.{ "simulations", "report" } },
     .{ .cmd = "make", .description = "Build automation (for report)", .required_for = &.{"report"} },
     .{ .cmd = "pdflatex", .description = "LaTeX compiler (for report)", .required_for = &.{"report"} },
     .{ .cmd = "bibtex", .description = "Bibliography processor (for report)", .required_for = &.{"report"} },
-
-    // Visualization dependency
-    .{ .cmd = "dot", .description = "Graph visualization (for diagrams)", .required_for = &.{"simulations"} },
 };
 
 // Targets and their transitive dependencies (what targets they depend on)
 const target_deps = struct {
+    const map = .{
+        .{ "check-deps", &[_][]const u8{} },
+        .{ "setup-python", &[_][]const u8{"check-deps"} },
+        .{ "init-gem5", &[_][]const u8{"check-deps"} },
+        .{ "gem5", &[_][]const u8{ "setup-python", "init-gem5" } },
+        .{ "m5", &[_][]const u8{ "setup-python", "init-gem5" } },
+        .{ "workloads", &[_][]const u8{"m5"} },
+        .{ "simulations", &[_][]const u8{ "gem5", "workloads" } },
+        .{ "visualize", &[_][]const u8{"simulations"} },
+        .{ "report", &[_][]const u8{"visualize"} },
+        .{ "default", &[_][]const u8{"workloads"} },
+        .{ "analyze", &[_][]const u8{} },
+    };
+
     fn get(target: []const u8) []const []const u8 {
-        const map = .{
-            .{ "check-deps", &[_][]const u8{} },
-            .{ "setup-python", &[_][]const u8{"check-deps"} },
-            .{ "init-gem5", &[_][]const u8{"check-deps"} },
-            .{ "gem5", &[_][]const u8{ "setup-python", "init-gem5" } },
-            .{ "m5", &[_][]const u8{ "setup-python", "init-gem5" } },
-            .{ "workloads", &[_][]const u8{"m5"} },
-            .{ "simulations", &[_][]const u8{ "gem5", "workloads" } },
-            .{ "visualize", &[_][]const u8{"simulations"} },
-            .{ "report", &[_][]const u8{"visualize"} },
-            .{ "default", &[_][]const u8{"workloads"} },
-            .{ "analyze", &[_][]const u8{} },
-        };
         inline for (map) |entry| {
             if (std.mem.eql(u8, target, entry[0])) return entry[1];
         }
@@ -53,6 +77,7 @@ const target_deps = struct {
     }
 };
 
+// Main build function
 pub fn build(b: *std.Build) void {
     // Target with static linking to avoid cross-platform simulation issues.
     const target = b.standardTargetOptions(.{
@@ -286,160 +311,6 @@ pub fn build(b: *std.Build) void {
     b.default_step = build_workloads;
 }
 
-/// Check if a command exists in PATH
-fn checkCmd(allocator: std.mem.Allocator, cmd: []const u8) bool {
-    const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch return false;
-    defer allocator.free(check_cmd);
-
-    const result = std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
-    }) catch return false;
-    defer allocator.free(result.stdout);
-    defer allocator.free(result.stderr);
-
-    return result.term.Exited == 0;
-}
-
-const known_targets = [_][]const u8{
-    "report",
-    "visualize",
-    "simulations",
-    "workloads",
-    "gem5",
-    "m5",
-    "init-gem5",
-    "setup-python",
-    "check-deps",
-    "analyze",
-    "install",
-};
-
-// Static buffer for target results (persists across function calls)
-var target_result_buffer: [16][]const u8 = undefined;
-var target_result_count: usize = 0;
-
-/// Recursively find root targets (steps with no dependants) starting from given step
-fn findRootTargets(step: *std.Build.Step) void {
-    // If this step has no dependants, it might be a root target
-    if (step.dependants.items.len == 0) {
-        const step_name = step.name;
-        for (known_targets) |target| {
-            if (std.mem.eql(u8, step_name, target)) {
-                // Avoid duplicates
-                var found = false;
-                for (target_result_buffer[0..target_result_count]) |existing| {
-                    if (std.mem.eql(u8, existing, target)) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found and target_result_count < target_result_buffer.len) {
-                    target_result_buffer[target_result_count] = target;
-                    target_result_count += 1;
-                }
-                return;
-            }
-        }
-        return;
-    }
-
-    // Recurse up to dependants
-    for (step.dependants.items) |dependant| {
-        findRootTargets(dependant);
-    }
-}
-
-/// Determine the target being built by walking up the dependency graph
-fn getRequestedTargets(step: *std.Build.Step) []const []const u8 {
-    // Reset the static buffer
-    target_result_count = 0;
-
-    findRootTargets(step);
-
-    // Map "install" to "default" (workloads)
-    for (target_result_buffer[0..target_result_count], 0..) |target, i| {
-        if (std.mem.eql(u8, target, "install")) {
-            target_result_buffer[i] = "default";
-        }
-    }
-
-    // If nothing specific, assume default (workloads)
-    if (target_result_count == 0) {
-        return &[_][]const u8{"default"};
-    }
-
-    return target_result_buffer[0..target_result_count];
-}
-
-/// Check if a dependency is required for any of the given targets (including transitive deps)
-fn isRequiredFor(dep: DepInfo, targets: []const []const u8) bool {
-    for (targets) |target| {
-        // Check direct requirement
-        for (dep.required_for) |req_target| {
-            if (std.mem.eql(u8, req_target, target)) return true;
-        }
-        // Check transitive dependencies
-        const transitive = target_deps.get(target);
-        for (transitive) |trans_target| {
-            for (dep.required_for) |req_target| {
-                if (std.mem.eql(u8, req_target, trans_target)) return true;
-            }
-        }
-    }
-    return false;
-}
-
-fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
-    const b = step.owner;
-    const allocator = b.allocator;
-
-    std.debug.print("\x1b[1;36m==> Checking dependencies...\x1b[0m\n", .{});
-
-    // Determine what targets are being built
-    const requested_targets = getRequestedTargets(step);
-
-    var hard_missing: u32 = 0;
-    var soft_missing: u32 = 0;
-
-    for (all_dependencies) |dep| {
-        const found = checkCmd(allocator, dep.cmd);
-        const is_required = isRequiredFor(dep, requested_targets);
-
-        if (found) {
-            std.debug.print("  \x1b[1;32m✓ {s}\x1b[0m: found\n", .{dep.cmd});
-        } else if (is_required) {
-            // Hard error - required for current target
-            std.debug.print("  \x1b[1;31m✗ {s}\x1b[0m: not found - \x1b[1;31mREQUIRED\x1b[0m ({s})\n", .{ dep.cmd, dep.description });
-            hard_missing += 1;
-        } else {
-            // Soft warning - not needed for current target
-            std.debug.print("  \x1b[1;33m⚠ {s}\x1b[0m: not found - needed for: ", .{dep.cmd});
-            for (dep.required_for, 0..) |target, i| {
-                if (i > 0) std.debug.print(", ", .{});
-                std.debug.print("{s}", .{target});
-            }
-            std.debug.print(" ({s})\n", .{dep.description});
-            soft_missing += 1;
-        }
-    }
-
-    if (hard_missing > 0) {
-        std.debug.print("\n\x1b[1;31mMissing required dependencies ({} required, {} optional):\x1b[0m\n", .{ hard_missing, soft_missing });
-        for (all_dependencies) |dep| {
-            if (!checkCmd(allocator, dep.cmd) and isRequiredFor(dep, requested_targets)) {
-                std.debug.print("  - {s} ({s})\n", .{ dep.cmd, dep.description });
-            }
-        }
-        std.debug.print("\n\x1b[1mPlease install the missing dependencies before continuing.\x1b[0m\n", .{});
-        return error.MissingDependencies;
-    }
-
-    if (soft_missing > 0) {
-        std.debug.print("\n\x1b[1;33mNote:\x1b[0m {d} optional dependencies not found (not needed for current target)\n", .{soft_missing});
-    }
-}
-
 fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
     const b = step.owner;
     const allocator = b.allocator;
@@ -534,18 +405,6 @@ fn initGem5Submodule(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
     std.debug.print("  \x1b[1;32m✓ gem5 submodule ready\x1b[0m\n", .{});
 }
 
-const PythonInfo = struct {
-    base_prefix: []const u8,
-    libdir: []const u8,
-    ver_mm: []const u8, // e.g. "3.14"
-
-    fn deinit(self: *const PythonInfo, allocator: std.mem.Allocator) void {
-        allocator.free(self.base_prefix);
-        allocator.free(self.libdir);
-        allocator.free(self.ver_mm);
-    }
-};
-
 fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
     const py = "./gem5/venv/bin/python";
 
@@ -568,8 +427,9 @@ fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
     };
     errdefer allocator.free(base_prefix);
 
-    // Get libdir - use base_prefix/lib directly since uv's standalone Python builds
-    // have sysconfig LIBDIR pointing to the original build path, not the installed location
+    // Get libdir: use base_prefix/lib directly since uv's standalone Python
+    // builds have sysconfig LIBDIR pointing to the original build path, not
+    // the installed location
     const libdir = std.fmt.allocPrint(allocator, "{s}/lib", .{base_prefix}) catch return error.OutOfMemory;
     errdefer allocator.free(libdir);
 
@@ -578,7 +438,8 @@ fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
         const res = std.process.Child.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{
-                py,                                                                          "-c",
+                py,
+                "-c",
                 "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}', end='')",
             },
         }) catch |err| {
@@ -624,7 +485,7 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
 
             const nproc_str = std.mem.trimRight(u8, nproc_result.stdout, "\n");
             const nproc = std.fmt.parseInt(u32, nproc_str, 10) catch 4;
-            const jobs = @max(1, nproc / 2); // Use half of the cores for better stability
+            const jobs = @max(1, 3 * nproc / 4); // Use 3/4 of the cores for better stability
 
             std.debug.print("\x1b[1mBuilding gem5 (this will take ~50 minutes)...\x1b[0m\n", .{});
             std.debug.print("\x1b[1mUsing {} parallel jobs\x1b[0m\n", .{jobs});
@@ -649,7 +510,7 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
             defer allocator.free(ldflags_env);
 
-            // LD_LIBRARY_PATH is needed at build time for SCons/gem5 to find libpython
+            // LD_LIBRARY_PATH is needed by SCons to find libpython.so
             const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
             defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
             const ldlib_env = if (old_ldlib.len != 0)
@@ -658,8 +519,9 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
             defer allocator.free(ldlib_env);
 
-            // PATH must include the venv bin so that `python3` resolves for gem5 build scripts
-            // Use absolute path since SCons changes directory with -C
+            // PATH must include the venv bin so that `python3` resolves for
+            // gem5 build scripts. We have to use an absolute path because
+            // SCons changes directory with -C.
             const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
             defer allocator.free(cwd);
             const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
@@ -736,7 +598,7 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
             const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
             defer allocator.free(ldflags_env);
 
-            // LD_LIBRARY_PATH is needed at build time for SCons to find libpython
+            // LD_LIBRARY_PATH is needed by SCons to find libpython.so
             const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
             defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
             const ldlib_env = if (old_ldlib.len != 0)
@@ -745,8 +607,9 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
             defer allocator.free(ldlib_env);
 
-            // PATH must include the venv bin so that `python3` resolves for build scripts
-            // Use absolute path since SCons changes directory with -C
+            // PATH must include the venv bin so that `python3` resolves for
+            // gem5 build scripts. We have to use an absolute path because
+            // SCons changes directory with -C.
             const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
             defer allocator.free(cwd);
             const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
@@ -912,8 +775,147 @@ fn buildReport(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!vo
     std.debug.print("  ⚡ \x1b[0mThe report is available in \x1b[1mreport/main.pdf\x1b[0m\n", .{});
 }
 
-fn printWorkloadsBuilt(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
-    _ = step;
-    // Final confirmation after all workload artifacts (and installs) complete
+// Final confirmation after all workload artifacts and installs complete
+fn printWorkloadsBuilt(_: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
     std.debug.print("  \x1b[1;32m✓ All workloads compiled and installed\x1b[0m\n", .{});
+}
+
+fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+    const b = step.owner;
+    const allocator = b.allocator;
+
+    std.debug.print("\x1b[1;36m==> Checking dependencies...\x1b[0m\n", .{});
+
+    // Determine what targets are being built
+    const requested_targets = getRequestedTargets(step);
+
+    var hard_missing: u32 = 0;
+    var soft_missing: u32 = 0;
+
+    for (all_dependencies) |dep| {
+        const found = checkCmd(allocator, dep.cmd);
+        const is_required = isRequiredFor(dep, requested_targets);
+
+        if (found) {
+            std.debug.print("  \x1b[1;32m✓ {s}\x1b[0m: found\n", .{dep.cmd});
+        } else if (is_required) {
+            // Hard error if required for current target
+            std.debug.print("  \x1b[1;31m✗ {s}\x1b[0m: not found - \x1b[1;31mREQUIRED\x1b[0m ({s})\n", .{ dep.cmd, dep.description });
+            hard_missing += 1;
+        } else {
+            // Soft warning if not needed for current target
+            std.debug.print("  \x1b[1;33m⚠ {s}\x1b[0m: not found - needed for: ", .{dep.cmd});
+            for (dep.required_for, 0..) |target, i| {
+                if (i > 0) std.debug.print(", ", .{});
+                std.debug.print("{s}", .{target});
+            }
+            std.debug.print(" ({s})\n", .{dep.description});
+            soft_missing += 1;
+        }
+    }
+
+    if (hard_missing > 0) {
+        std.debug.print("\n\x1b[1;31mMissing required dependencies ({} required, {} optional):\x1b[0m\n", .{ hard_missing, soft_missing });
+        for (all_dependencies) |dep| {
+            if (!checkCmd(allocator, dep.cmd) and isRequiredFor(dep, requested_targets)) {
+                std.debug.print("  - {s} ({s})\n", .{ dep.cmd, dep.description });
+            }
+        }
+        std.debug.print("\n\x1b[1mPlease install the missing dependencies before continuing.\x1b[0m\n", .{});
+        return error.MissingDependencies;
+    }
+
+    if (soft_missing > 0) {
+        std.debug.print("\n\x1b[1;33mNote:\x1b[0m {d} optional dependencies not found (not needed for current target)\n", .{soft_missing});
+    }
+}
+
+/// Check if a command exists in PATH
+fn checkCmd(allocator: std.mem.Allocator, cmd: []const u8) bool {
+    const check_cmd = std.fmt.allocPrint(allocator, "command -v {s}", .{cmd}) catch return false;
+    defer allocator.free(check_cmd);
+
+    const result = std.process.Child.run(.{
+        .allocator = allocator,
+        .argv = &[_][]const u8{ "/bin/sh", "-c", check_cmd },
+    }) catch return false;
+    defer allocator.free(result.stdout);
+    defer allocator.free(result.stderr);
+
+    return result.term.Exited == 0;
+}
+
+/// Check if a dependency is required for any of the given targets
+fn isRequiredFor(dep: DepInfo, targets: []const []const u8) bool {
+    for (targets) |target| {
+        // Check direct requirement
+        for (dep.required_for) |req_target| {
+            if (std.mem.eql(u8, req_target, target)) return true;
+        }
+        // Check transitive dependencies
+        const transitive = target_deps.get(target);
+        for (transitive) |trans_target| {
+            for (dep.required_for) |req_target| {
+                if (std.mem.eql(u8, req_target, trans_target)) return true;
+            }
+        }
+    }
+    return false;
+}
+
+// Static buffer for target results
+var target_result_buffer: [16][]const u8 = undefined;
+var target_result_count: usize = 0;
+
+/// Recursively find root targets starting from given step
+fn findRootTargets(step: *std.Build.Step) void {
+    // If this step has no dependants, it might be a root target
+    if (step.dependants.items.len == 0) {
+        const step_name = step.name;
+        for (known_targets) |target| {
+            if (std.mem.eql(u8, step_name, target)) {
+                // Avoid duplicates
+                var found = false;
+                for (target_result_buffer[0..target_result_count]) |existing| {
+                    if (std.mem.eql(u8, existing, target)) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found and target_result_count < target_result_buffer.len) {
+                    target_result_buffer[target_result_count] = target;
+                    target_result_count += 1;
+                }
+                return;
+            }
+        }
+        return;
+    }
+
+    // Recurse up to dependants
+    for (step.dependants.items) |dependant| {
+        findRootTargets(dependant);
+    }
+}
+
+/// Determine the target being built by walking up the dependency graph
+fn getRequestedTargets(step: *std.Build.Step) []const []const u8 {
+    // Reset the static buffer
+    target_result_count = 0;
+
+    findRootTargets(step);
+
+    // Map "install" to "default", which is to install workloads
+    for (target_result_buffer[0..target_result_count], 0..) |target, i| {
+        if (std.mem.eql(u8, target, "install")) {
+            target_result_buffer[i] = "default";
+        }
+    }
+
+    // If nothing specific, assume default
+    if (target_result_count == 0) {
+        return &[_][]const u8{"default"};
+    }
+
+    return target_result_buffer[0..target_result_count];
 }
