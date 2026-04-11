@@ -21,7 +21,7 @@ pub fn build(b: *std.Build) void {
     check_deps.makeFn = checkDependencies;
 
     // Setup Python Environment
-    const setup_python = b.step("setup-python", "Setup Python environment with pyenv");
+    const setup_python = b.step("setup-python", "Setup Python environment with uv");
     setup_python.dependOn(check_deps);
     setup_python.makeFn = setupPythonEnvironment;
 
@@ -245,7 +245,7 @@ fn checkDependencies(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
 
     // List of required commands
     const required_commands = [_][]const u8{
-        "pyenv",
+        "uv",
         "cc",
         "c++",
         "git",
@@ -300,79 +300,64 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     const b = step.owner;
     const allocator = b.allocator;
 
-    std.debug.print("\n\x1b[1;36m==> Setting up Python environment...\x1b[0m\n", .{});
+    std.debug.print("\n\x1b[1;36m==> Setting up Python environment (uv)...\x1b[0m\n", .{});
 
-    // Install Python 3.14.3 if not already installed
-    const install_result = std.process.Child.run(.{
-        .allocator = allocator,
-        .argv = &[_][]const u8{ "pyenv", "install", "--skip-existing", "3.14.3" },
-    }) catch |err| {
-        std.debug.print("Failed to install Python 3.14.3: {}\n", .{err});
-        return err;
-    };
-    defer allocator.free(install_result.stdout);
-    defer allocator.free(install_result.stderr);
-
-    if (install_result.term.Exited != 0) {
-        std.debug.print("Failed to install Python 3.14.3:\n{s}\n", .{install_result.stderr});
-        return error.PythonInstallFailed;
-    }
-
-    // Initialize venv and install dependencies
-    const venv_path = "gem5/venv";
-    if (std.fs.cwd().statFile(venv_path)) |_| {} else |err| {
-        if (err == error.FileNotFound) {
-            std.debug.print("\x1b[1mCreating Python virtual environment...\x1b[0m\n", .{});
-            const venv_result = std.process.Child.run(.{
-                .allocator = allocator,
-                .argv = &[_][]const u8{
-                    "env",
-                    "PYENV_VERSION=3.14.3",
-                    "pyenv",
-                    "exec",
-                    "python",
-                    "-m",
-                    "venv",
-                    "gem5/venv",
-                },
-            }) catch |venv_err| {
-                std.debug.print("Failed to create venv: {}\n", .{venv_err});
-                return venv_err;
-            };
-            defer allocator.free(venv_result.stdout);
-            defer allocator.free(venv_result.stderr);
-
-            if (venv_result.term.Exited != 0) {
-                std.debug.print("Failed to create venv:\n{s}\n", .{venv_result.stderr});
-                return error.VenvCreationFailed;
-            }
-
-            // Install dependencies
-            std.debug.print("\x1b[1mInstalling Python dependencies...\x1b[0m\n", .{});
-            var pip_child = std.process.Child.init(&[_][]const u8{
-                "env",
-                "PIP_PROGRESS_BAR=off",
-                "./gem5/venv/bin/pip",
-                "--disable-pip-version-check",
-                "--require-virtualenv",
-                "install",
-                "-r",
-                "requirements.txt",
-            }, allocator);
-            pip_child.stdout_behavior = .Inherit;
-            pip_child.stderr_behavior = .Inherit;
-            const pip_term = pip_child.spawnAndWait() catch |pip_err| {
-                std.debug.print("Failed to install dependencies: {}\n", .{pip_err});
-                return pip_err;
-            };
-            if (pip_term.Exited != 0) {
-                std.debug.print("Failed to install dependencies (exit code {})\n", .{pip_term.Exited});
-                return error.DependencyInstallFailed;
-            }
-        } else {
+    // Ensure CPython 3.14.3 is available (managed by uv)
+    {
+        std.debug.print("\x1b[1mEnsuring Python 3.14.3 is installed...\x1b[0m\n", .{});
+        var child = std.process.Child.init(&[_][]const u8{ "uv", "python", "install", "3.14.3" }, allocator);
+        child.stdout_behavior = .Inherit;
+        child.stderr_behavior = .Inherit;
+        const term = child.spawnAndWait() catch |err| {
+            std.debug.print("Failed to install Python 3.14.3: {}\n", .{err});
             return err;
+        };
+        if (term.Exited != 0) {
+            std.debug.print("Failed to install Python 3.14.3 (exit code {})\n", .{term.Exited});
+            return error.PythonInstallFailed;
         }
     }
+
+    // Create venv if missing
+    const venv_path = "gem5/venv";
+    if (std.fs.cwd().statFile(venv_path)) |_| {} else |err| {
+        if (err != error.FileNotFound) return err;
+
+        std.debug.print("\x1b[1mCreating Python virtual environment...\x1b[0m\n", .{});
+        var child = std.process.Child.init(&[_][]const u8{
+            "uv", "venv", "--python", "3.14.3", "gem5/venv",
+        }, allocator);
+        child.stdout_behavior = .Inherit;
+        child.stderr_behavior = .Inherit;
+        const term = child.spawnAndWait() catch |venv_err| {
+            std.debug.print("Failed to create venv: {}\n", .{venv_err});
+            return venv_err;
+        };
+        if (term.Exited != 0) {
+            std.debug.print("Failed to create venv (exit code {})\n", .{term.Exited});
+            return error.VenvCreationFailed;
+        }
+    }
+
+    // Install Python deps into that venv
+    {
+        std.debug.print("\x1b[1mInstalling Python dependencies...\x1b[0m\n", .{});
+        var child = std.process.Child.init(&[_][]const u8{
+            "uv", "pip", "install", "--python", "gem5/venv", "-r", "requirements.txt",
+        }, allocator);
+        child.stdout_behavior = .Inherit;
+        child.stderr_behavior = .Inherit;
+        const term = child.spawnAndWait() catch |pip_err| {
+            std.debug.print("Failed to install dependencies: {}\n", .{pip_err});
+            return pip_err;
+        };
+        if (term.Exited != 0) {
+            std.debug.print("Failed to install dependencies (exit code {})\n", .{term.Exited});
+            return error.DependencyInstallFailed;
+        }
+    }
+
+    std.debug.print("  \x1b[1;32m✓ Python environment ready\x1b[0m\n", .{});
 }
 
 fn initGem5Submodule(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
@@ -403,6 +388,90 @@ fn initGem5Submodule(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
     }
 
     std.debug.print("  \x1b[1;32m✓ gem5 submodule ready\x1b[0m\n", .{});
+}
+
+const PythonInfo = struct {
+    base_prefix: []const u8,
+    libdir: []const u8,
+    ver_mm: []const u8, // e.g. "3.14"
+
+    fn deinit(self: *const PythonInfo, allocator: std.mem.Allocator) void {
+        allocator.free(self.base_prefix);
+        allocator.free(self.libdir);
+        allocator.free(self.ver_mm);
+    }
+};
+
+fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
+    const py = "./gem5/venv/bin/python";
+
+    // Get sys.base_prefix
+    const base_prefix = blk: {
+        const res = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{ py, "-c", "import sys; print(sys.base_prefix, end='')" },
+        }) catch |err| {
+            std.debug.print("Failed to query Python base_prefix: {}\n", .{err});
+            return err;
+        };
+        defer allocator.free(res.stderr);
+        if (res.term.Exited != 0) {
+            defer allocator.free(res.stdout);
+            std.debug.print("Failed to query Python base_prefix:\n{s}\n", .{res.stderr});
+            return error.PythonQueryFailed;
+        }
+        break :blk res.stdout;
+    };
+    errdefer allocator.free(base_prefix);
+
+    // Get sysconfig LIBDIR
+    const libdir = blk: {
+        const res = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{
+                py,                                                                                                       "-c",
+                "import sys, sysconfig; print(sysconfig.get_config_var('LIBDIR') or (sys.base_prefix + '/lib'), end='')",
+            },
+        }) catch |err| {
+            std.debug.print("Failed to query Python libdir: {}\n", .{err});
+            return err;
+        };
+        defer allocator.free(res.stderr);
+        if (res.term.Exited != 0) {
+            defer allocator.free(res.stdout);
+            std.debug.print("Failed to query Python libdir:\n{s}\n", .{res.stderr});
+            return error.PythonQueryFailed;
+        }
+        break :blk res.stdout;
+    };
+    errdefer allocator.free(libdir);
+
+    // Get version major.minor
+    const ver_mm = blk: {
+        const res = std.process.Child.run(.{
+            .allocator = allocator,
+            .argv = &[_][]const u8{
+                py,                                                                          "-c",
+                "import sys; print(f'{sys.version_info[0]}.{sys.version_info[1]}', end='')",
+            },
+        }) catch |err| {
+            std.debug.print("Failed to query Python version: {}\n", .{err});
+            return err;
+        };
+        defer allocator.free(res.stderr);
+        if (res.term.Exited != 0) {
+            defer allocator.free(res.stdout);
+            std.debug.print("Failed to query Python version:\n{s}\n", .{res.stderr});
+            return error.PythonQueryFailed;
+        }
+        break :blk res.stdout;
+    };
+
+    return PythonInfo{
+        .base_prefix = base_prefix,
+        .libdir = libdir,
+        .ver_mm = ver_mm,
+    };
 }
 
 fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
@@ -436,65 +505,22 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const build_cmd = std.fmt.allocPrint(allocator, "-j{}", .{jobs}) catch return error.OutOfMemory;
             defer allocator.free(build_cmd);
 
-            // Ensure gem5 can find python*-config from the pyenv CPython install.
-            // venvs do not provide python3-config, and systems without a global
-            // python will fail unless we prepend the pyenv version's bin to PATH.
-            const prefix_res = std.process.Child.run(.{
-                .allocator = allocator,
-                .argv = &[_][]const u8{ "pyenv", "prefix", "3.14.3" },
-            }) catch |perr| {
-                std.debug.print("Failed to query pyenv prefix: {}\n", .{perr});
+            // Query Python info from venv to get PYTHON_CONFIG and rpath
+            const pyinfo = pythonInfoFromVenv(allocator) catch |perr| {
+                std.debug.print("Failed to query Python info from venv: {}\n", .{perr});
                 return perr;
             };
-            defer allocator.free(prefix_res.stdout);
-            defer allocator.free(prefix_res.stderr);
+            defer pyinfo.deinit(allocator);
 
-            if (prefix_res.term.Exited != 0) {
-                std.debug.print("Failed to query pyenv prefix:\n{s}\n", .{prefix_res.stderr});
-                return error.PythonInstallFailed;
-            }
-
-            const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
-            const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
-            defer allocator.free(py_bin);
-            const py_lib = std.fmt.allocPrint(allocator, "{s}/lib", .{py_prefix}) catch return error.OutOfMemory;
-            defer allocator.free(py_lib);
-
-            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
-            defer if (old_path.len != 0) allocator.free(old_path);
-            const new_path = if (old_path.len != 0)
-                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ py_bin, old_path }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
-            defer allocator.free(new_path);
-
-            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
-            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
-            const new_ldlib = if (old_ldlib.len != 0)
-                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ py_lib, old_ldlib }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{py_lib}) catch return error.OutOfMemory);
-            defer allocator.free(new_ldlib);
-
-            const old_ldflags = std.process.getEnvVarOwned(allocator, "LDFLAGS") catch "";
-            defer if (old_ldflags.len != 0) allocator.free(old_ldflags);
-            const rpath_flag = std.fmt.allocPrint(allocator, "-Wl,-rpath,{s}", .{py_lib}) catch return error.OutOfMemory;
-            defer allocator.free(rpath_flag);
-            const new_ldflags = if (old_ldflags.len != 0)
-                (std.fmt.allocPrint(allocator, "LDFLAGS={s} {s}", .{ rpath_flag, old_ldflags }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "LDFLAGS={s}", .{rpath_flag}) catch return error.OutOfMemory);
-            defer allocator.free(new_ldflags);
-
-            const pyconfig_env = std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory;
+            const pyconfig_env = std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/bin/python{s}-config", .{ pyinfo.base_prefix, pyinfo.ver_mm }) catch return error.OutOfMemory;
             defer allocator.free(pyconfig_env);
+
+            const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
+            defer allocator.free(ldflags_env);
 
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
-                new_path,
-                new_ldlib,
-                new_ldflags,
-                // Also provide explicit PYTHON_CONFIG for robustness
+                ldflags_env,
                 pyconfig_env,
                 "./gem5/venv/bin/scons",
                 "-C",
@@ -532,76 +558,37 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
         if (err == error.FileNotFound) {
             std.debug.print("\n\x1b[1;36m==> Building gem5 m5 control library...\x1b[0m\n", .{});
 
-            // Ensure python*-config is discoverable during m5 build as well.
-            const prefix_res = std.process.Child.run(.{
-                .allocator = allocator,
-                .argv = &[_][]const u8{ "pyenv", "prefix", "3.14.3" },
-            }) catch |perr| {
-                std.debug.print("Failed to query pyenv prefix: {}\n", .{perr});
+            // Query Python info from venv to get PYTHON_CONFIG and rpath
+            const pyinfo = pythonInfoFromVenv(allocator) catch |perr| {
+                std.debug.print("Failed to query Python info from venv: {}\n", .{perr});
                 return perr;
             };
-            defer allocator.free(prefix_res.stdout);
-            defer allocator.free(prefix_res.stderr);
+            defer pyinfo.deinit(allocator);
 
-            if (prefix_res.term.Exited != 0) {
-                std.debug.print("Failed to query pyenv prefix:\n{s}\n", .{prefix_res.stderr});
-                return error.PythonInstallFailed;
-            }
+            const pyconfig_env = std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/bin/python{s}-config", .{ pyinfo.base_prefix, pyinfo.ver_mm }) catch return error.OutOfMemory;
+            defer allocator.free(pyconfig_env);
 
-            const py_prefix = std.mem.trimRight(u8, prefix_res.stdout, "\n");
-            const py_bin = std.fmt.allocPrint(allocator, "{s}/bin", .{py_prefix}) catch return error.OutOfMemory;
-            defer allocator.free(py_bin);
-            const py_lib = std.fmt.allocPrint(allocator, "{s}/lib", .{py_prefix}) catch return error.OutOfMemory;
-            defer allocator.free(py_lib);
+            const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
+            defer allocator.free(ldflags_env);
 
-            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
-            defer if (old_path.len != 0) allocator.free(old_path);
-            const new_path = if (old_path.len != 0)
-                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ py_bin, old_path }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "PATH={s}", .{py_bin}) catch return error.OutOfMemory);
-            defer allocator.free(new_path);
-
-            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
-            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
-            const new_ldlib = if (old_ldlib.len != 0)
-                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ py_lib, old_ldlib }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{py_lib}) catch return error.OutOfMemory);
-            defer allocator.free(new_ldlib);
-
-            const old_ldflags = std.process.getEnvVarOwned(allocator, "LDFLAGS") catch "";
-            defer if (old_ldflags.len != 0) allocator.free(old_ldflags);
-            const rpath_flag = std.fmt.allocPrint(allocator, "-Wl,-rpath,{s}", .{py_lib}) catch return error.OutOfMemory;
-            defer allocator.free(rpath_flag);
-            const new_ldflags = if (old_ldflags.len != 0)
-                (std.fmt.allocPrint(allocator, "LDFLAGS={s} {s}", .{ rpath_flag, old_ldflags }) catch return error.OutOfMemory)
-            else
-                (std.fmt.allocPrint(allocator, "LDFLAGS={s}", .{rpath_flag}) catch return error.OutOfMemory);
-            defer allocator.free(new_ldflags);
-
-            const build_result = std.process.Child.run(.{
-                .allocator = allocator,
-                .argv = &[_][]const u8{
-                    "env",
-                    new_path,
-                    new_ldlib,
-                    new_ldflags,
-                    std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/python3.14-config", .{py_bin}) catch return error.OutOfMemory,
-                    "./gem5/venv/bin/scons",
-                    "-C",
-                    "gem5/util/m5",
-                    "build/x86/out/m5",
-                },
-            }) catch |build_err| {
+            var child = std.process.Child.init(&[_][]const u8{
+                "env",
+                ldflags_env,
+                pyconfig_env,
+                "./gem5/venv/bin/scons",
+                "-C",
+                "gem5/util/m5",
+                "build/x86/out/m5",
+            }, allocator);
+            child.stdout_behavior = .Inherit;
+            child.stderr_behavior = .Inherit;
+            const term = child.spawnAndWait() catch |build_err| {
                 std.debug.print("Failed to build m5 library: {}\n", .{build_err});
                 return build_err;
             };
-            defer allocator.free(build_result.stdout);
-            defer allocator.free(build_result.stderr);
 
-            if (build_result.term.Exited != 0) {
-                std.debug.print("\x1b[1;31mFailed to build m5 library:\x1b[0m\n{s}\n", .{build_result.stderr});
+            if (term.Exited != 0) {
+                std.debug.print("\x1b[1;31mFailed to build m5 library (exit code {})\x1b[0m\n", .{term.Exited});
                 return error.M5BuildFailed;
             }
         } else {
