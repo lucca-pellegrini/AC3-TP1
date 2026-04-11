@@ -514,16 +514,36 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
             defer allocator.free(ldlib_env);
 
+            // PATH must include the venv bin so that `python3` resolves for gem5 build scripts
+            // Use absolute path since SCons changes directory with -C
+            const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
+            defer allocator.free(cwd);
+            const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
+            defer allocator.free(venv_bin);
+
+            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
+            defer if (old_path.len != 0) allocator.free(old_path);
+            const path_env = if (old_path.len != 0)
+                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ venv_bin, old_path }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
+            defer allocator.free(path_env);
+
             std.debug.print("  {s}\n", .{ldlib_env});
             std.debug.print("  {s}\n", .{ldflags_env});
             std.debug.print("  {s}\n", .{pyconfig_env});
+            std.debug.print("  {s}\n", .{path_env});
+
+            const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
+            defer allocator.free(scons_path);
 
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
+                path_env,
                 ldlib_env,
                 ldflags_env,
                 pyconfig_env,
-                "./gem5/venv/bin/scons",
+                scons_path,
                 "-C",
                 "gem5",
                 "--ignore-style",
@@ -581,12 +601,31 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
             defer allocator.free(ldlib_env);
 
+            // PATH must include the venv bin so that `python3` resolves for build scripts
+            // Use absolute path since SCons changes directory with -C
+            const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
+            defer allocator.free(cwd);
+            const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
+            defer allocator.free(venv_bin);
+
+            const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
+            defer if (old_path.len != 0) allocator.free(old_path);
+            const path_env = if (old_path.len != 0)
+                (std.fmt.allocPrint(allocator, "PATH={s}:{s}", .{ venv_bin, old_path }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
+            defer allocator.free(path_env);
+
+            const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
+            defer allocator.free(scons_path);
+
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
+                path_env,
                 ldlib_env,
                 ldflags_env,
                 pyconfig_env,
-                "./gem5/venv/bin/scons",
+                scons_path,
                 "-C",
                 "gem5/util/m5",
                 "build/x86/out/m5",
