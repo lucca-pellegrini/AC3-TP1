@@ -366,6 +366,52 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
         }
     }
 
+    // Create clang/clang++ wrapper scripts in the venv bin directory
+    // These wrap "zig cc" and "zig c++" so SCons can find them as 'clang'/'clang++'
+    {
+        const venv_bin = try std.fs.cwd().openDir("gem5/venv/bin", .{});
+        const clang_script =
+            \\#!/bin/sh
+            \\exec zig cc "$@"
+        ;
+        const clangxx_script =
+            \\#!/bin/sh
+            \\exec zig c++ "$@"
+        ;
+
+        // Write clang wrapper
+        const clang_file = venv_bin.createFile("clang", .{}) catch |err| {
+            std.debug.print("Failed to create clang wrapper: {}\n", .{err});
+            return err;
+        };
+        defer clang_file.close();
+        clang_file.writeAll(clang_script) catch |err| {
+            std.debug.print("Failed to write clang wrapper: {}\n", .{err});
+            return err;
+        };
+        // Make executable
+        std.posix.fchmod(clang_file.handle, 0o755) catch |err| {
+            std.debug.print("Failed to chmod clang wrapper: {}\n", .{err});
+            return err;
+        };
+
+        // Write clang++ wrapper
+        const clangxx_file = venv_bin.createFile("clang++", .{}) catch |err| {
+            std.debug.print("Failed to create clang++ wrapper: {}\n", .{err});
+            return err;
+        };
+        defer clangxx_file.close();
+        clangxx_file.writeAll(clangxx_script) catch |err| {
+            std.debug.print("Failed to write clang++ wrapper: {}\n", .{err});
+            return err;
+        };
+        // Make executable
+        std.posix.fchmod(clangxx_file.handle, 0o755) catch |err| {
+            std.debug.print("Failed to chmod clang++ wrapper: {}\n", .{err});
+            return err;
+        };
+    }
+
     std.debug.print("  \x1b[1;32m✓ Python environment ready\x1b[0m\n", .{});
 }
 
@@ -538,12 +584,11 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
             defer allocator.free(path_env);
 
-            // Use zig cc/c++ as the C/C++ compilers (Clang-based, no system GCC needed)
-            const zig_path = std.fs.selfExeDirPathAlloc(allocator) catch return error.OutOfMemory;
-            defer allocator.free(zig_path);
-            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/zig cc", .{zig_path}) catch return error.OutOfMemory;
+            // CC/CXX point to clang/clang++ wrappers in venv bin (created by setup-python)
+            // These wrappers invoke "zig cc" / "zig c++"
+            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/clang", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(cc_env);
-            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/zig c++", .{zig_path}) catch return error.OutOfMemory;
+            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/clang++", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(cxx_env);
 
             std.debug.print("  {s}\n", .{ldlib_env});
@@ -638,12 +683,11 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
                 (std.fmt.allocPrint(allocator, "PATH={s}", .{venv_bin}) catch return error.OutOfMemory);
             defer allocator.free(path_env);
 
-            // Use zig cc/c++ as the C/C++ compilers (Clang-based, no system GCC needed)
-            const zig_path = std.fs.selfExeDirPathAlloc(allocator) catch return error.OutOfMemory;
-            defer allocator.free(zig_path);
-            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/zig cc", .{zig_path}) catch return error.OutOfMemory;
+            // CC/CXX point to clang/clang++ wrappers in venv bin (created by setup-python)
+            // These wrappers invoke "zig cc" / "zig c++"
+            const cc_env = std.fmt.allocPrint(allocator, "CC={s}/clang", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(cc_env);
-            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/zig c++", .{zig_path}) catch return error.OutOfMemory;
+            const cxx_env = std.fmt.allocPrint(allocator, "CXX={s}/clang++", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(cxx_env);
 
             const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
