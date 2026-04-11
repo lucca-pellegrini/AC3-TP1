@@ -424,26 +424,9 @@ fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
     };
     errdefer allocator.free(base_prefix);
 
-    // Get sysconfig LIBDIR
-    const libdir = blk: {
-        const res = std.process.Child.run(.{
-            .allocator = allocator,
-            .argv = &[_][]const u8{
-                py,                                                                                                       "-c",
-                "import sys, sysconfig; print(sysconfig.get_config_var('LIBDIR') or (sys.base_prefix + '/lib'), end='')",
-            },
-        }) catch |err| {
-            std.debug.print("Failed to query Python libdir: {}\n", .{err});
-            return err;
-        };
-        defer allocator.free(res.stderr);
-        if (res.term.Exited != 0) {
-            defer allocator.free(res.stdout);
-            std.debug.print("Failed to query Python libdir:\n{s}\n", .{res.stderr});
-            return error.PythonQueryFailed;
-        }
-        break :blk res.stdout;
-    };
+    // Get libdir - use base_prefix/lib directly since uv's standalone Python builds
+    // have sysconfig LIBDIR pointing to the original build path, not the installed location
+    const libdir = std.fmt.allocPrint(allocator, "{s}/lib", .{base_prefix}) catch return error.OutOfMemory;
     errdefer allocator.free(libdir);
 
     // Get version major.minor
@@ -505,12 +488,16 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const build_cmd = std.fmt.allocPrint(allocator, "-j{}", .{jobs}) catch return error.OutOfMemory;
             defer allocator.free(build_cmd);
 
-            // Query Python info from venv to get PYTHON_CONFIG and rpath
+            // Query Python info from venv to get PYTHON_CONFIG, rpath, and LD_LIBRARY_PATH
             const pyinfo = pythonInfoFromVenv(allocator) catch |perr| {
                 std.debug.print("Failed to query Python info from venv: {}\n", .{perr});
                 return perr;
             };
             defer pyinfo.deinit(allocator);
+
+            std.debug.print("  Python base_prefix: {s}\n", .{pyinfo.base_prefix});
+            std.debug.print("  Python libdir: {s}\n", .{pyinfo.libdir});
+            std.debug.print("  Python version: {s}\n", .{pyinfo.ver_mm});
 
             const pyconfig_env = std.fmt.allocPrint(allocator, "PYTHON_CONFIG={s}/bin/python{s}-config", .{ pyinfo.base_prefix, pyinfo.ver_mm }) catch return error.OutOfMemory;
             defer allocator.free(pyconfig_env);
@@ -518,8 +505,22 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
             defer allocator.free(ldflags_env);
 
+            // LD_LIBRARY_PATH is needed at build time for SCons/gem5 to find libpython
+            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
+            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
+            const ldlib_env = if (old_ldlib.len != 0)
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ pyinfo.libdir, old_ldlib }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
+            defer allocator.free(ldlib_env);
+
+            std.debug.print("  {s}\n", .{ldlib_env});
+            std.debug.print("  {s}\n", .{ldflags_env});
+            std.debug.print("  {s}\n", .{pyconfig_env});
+
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
+                ldlib_env,
                 ldflags_env,
                 pyconfig_env,
                 "./gem5/venv/bin/scons",
@@ -558,7 +559,7 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
         if (err == error.FileNotFound) {
             std.debug.print("\n\x1b[1;36m==> Building gem5 m5 control library...\x1b[0m\n", .{});
 
-            // Query Python info from venv to get PYTHON_CONFIG and rpath
+            // Query Python info from venv to get PYTHON_CONFIG, rpath, and LD_LIBRARY_PATH
             const pyinfo = pythonInfoFromVenv(allocator) catch |perr| {
                 std.debug.print("Failed to query Python info from venv: {}\n", .{perr});
                 return perr;
@@ -571,8 +572,18 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
             const ldflags_env = std.fmt.allocPrint(allocator, "LDFLAGS=-Wl,-rpath,{s}", .{pyinfo.libdir}) catch return error.OutOfMemory;
             defer allocator.free(ldflags_env);
 
+            // LD_LIBRARY_PATH is needed at build time for SCons to find libpython
+            const old_ldlib = std.process.getEnvVarOwned(allocator, "LD_LIBRARY_PATH") catch "";
+            defer if (old_ldlib.len != 0) allocator.free(old_ldlib);
+            const ldlib_env = if (old_ldlib.len != 0)
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}:{s}", .{ pyinfo.libdir, old_ldlib }) catch return error.OutOfMemory)
+            else
+                (std.fmt.allocPrint(allocator, "LD_LIBRARY_PATH={s}", .{pyinfo.libdir}) catch return error.OutOfMemory);
+            defer allocator.free(ldlib_env);
+
             var child = std.process.Child.init(&[_][]const u8{
                 "env",
+                ldlib_env,
                 ldflags_env,
                 pyconfig_env,
                 "./gem5/venv/bin/scons",
