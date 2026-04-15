@@ -87,8 +87,6 @@ Dataset choices compiled into the real-run workloads:
 
 Required (checked by `zig build check-deps`):
 - [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended)
-- [GCC/G++ 15.2.1](https://gcc.gnu.org/) (used by gem5/m5 via
-  [SCons](https://scons.org/))
 - [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside
   gem5/venv)
 - A system-wide [GCC](https://gcc.gnu.org/) or [Clang](https://clang.llvm.org/)
