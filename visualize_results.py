@@ -24,6 +24,8 @@ Parameters varied:
 """
 
 import re
+import os
+import shutil
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -40,6 +42,103 @@ from matplotlib import colors as mcolors
 assert (
     scienceplots  # ensure the imported style package is recognized as used by linters
 )
+
+
+def _prepend_path(dir_path: Path) -> None:
+    """Prepend a directory to PATH if it's not already present."""
+    try:
+        p = str(dir_path)
+    except Exception:
+        return
+    if not p:
+        return
+    cur = os.environ.get("PATH", "")
+    parts = cur.split(":") if cur else []
+    if p in parts:
+        return
+    os.environ["PATH"] = f"{p}:{cur}" if cur else p
+
+
+def _candidate_tex_bin_dirs() -> List[Path]:
+    """Return likely TeX binary directories (system TeX Live or TinyTeX).
+
+    This is intentionally conservative: we only add directories that actually
+    contain a `latex` binary.
+    """
+    candidates: List[Path] = []
+
+    # Allow explicit overrides.
+    for env_var in ("TEXBIN", "TINYTEX_BIN", "TEXLIVE_BIN"):
+        v = os.environ.get(env_var)
+        if v:
+            candidates.append(Path(v).expanduser())
+
+    # Common TinyTeX locations.
+    candidates.append(Path("~/.TinyTeX/bin").expanduser())
+
+    # If installed via mise, TinyTeX lives under ~/.local/share/mise/installs.
+    mise_installs = Path("~/.local/share/mise/installs").expanduser()
+    if mise_installs.exists():
+        # e.g. ~/.local/share/mise/installs/tinytex/2026.04/TinyTeX/bin/x86_64-linux
+        candidates.extend((mise_installs / "tinytex").glob("**/bin"))
+        candidates.extend((mise_installs / "tinytex").glob("**/TinyTeX/bin"))
+        candidates.extend((mise_installs / "tinytex").glob("**/TinyTeX/bin/*"))
+
+    # Expand any directory that is a "bin root" to its arch subdir.
+    expanded: List[Path] = []
+    for c in candidates:
+        if not c.exists():
+            continue
+        if (c / "latex").exists():
+            expanded.append(c)
+            continue
+        # TinyTeX often has an arch layer: .../bin/x86_64-linux
+        try:
+            for sub in c.glob("*"):
+                if sub.is_dir() and (sub / "latex").exists():
+                    expanded.append(sub)
+        except Exception:
+            continue
+
+    # De-duplicate while preserving order.
+    uniq: List[Path] = []
+    seen: set[str] = set()
+    for p in expanded:
+        key = str(p)
+        if key not in seen:
+            seen.add(key)
+            uniq.append(p)
+    return uniq
+
+
+def ensure_usetex_dependencies() -> None:
+    """Ensure Matplotlib's `text.usetex` dependencies are available.
+
+    The SciencePlots `ieee` style enables `text.usetex=True`. For Matplotlib,
+    this requires (at minimum) `latex` and `dvipng` on PATH.
+
+    If TeX isn't currently on PATH, we try to locate TinyTeX (including mise
+    installs) and prepend it.
+    """
+    required = ("latex", "dvipng")
+    if all(shutil.which(cmd) for cmd in required):
+        return
+
+    for texbin in _candidate_tex_bin_dirs():
+        _prepend_path(texbin)
+        if all(shutil.which(cmd) for cmd in required):
+            return
+
+    missing = [cmd for cmd in required if shutil.which(cmd) is None]
+    if missing:
+        raise RuntimeError(
+            "Matplotlib is configured for LaTeX text rendering (text.usetex=True), "
+            f"but required tool(s) are not on PATH: {', '.join(missing)}. "
+            "\n\nFix options:\n"
+            "  - System TeX Live: install a full TeX Live, or at least packages providing 'latex' and 'dvipng'.\n"
+            "  - TinyTeX (mise): `mise install` then `mise run setup-tex` (installs dvipng + common LaTeX/font packages).\n"
+            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng collection-latexextra collection-fontsrecommended`.\n"
+        )
 
 
 # Preferred style list (used with context where possible)
@@ -253,9 +352,7 @@ class SimulationStats:
     """Complete statistics from a single simulation run."""
 
     workload: str = ""
-    config_type: str = (
-        ""  # 'cache_config', 'cache_line', 'l1_assoc', 'l2_assoc', 'l3_assoc', 'baseline'
-    )
+    config_type: str = ""  # 'cache_config', 'cache_line', 'l1_assoc', 'l2_assoc', 'l3_assoc', 'baseline'
     config_value: str = ""  # The actual value
 
     # CPU stats
@@ -1561,6 +1658,13 @@ def main():
     print(f"Results directory: {results_dir}")
     print(f"Figures directory: {figures_dir}")
     print()
+
+    # The plotting style requires LaTeX. Fail fast with actionable guidance.
+    try:
+        ensure_usetex_dependencies()
+    except RuntimeError as e:
+        print("ERROR:", e)
+        sys.exit(2)
 
     # Collect all results
     print("Collecting simulation results...")

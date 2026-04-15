@@ -93,8 +93,11 @@ Required (checked by `zig build check-deps`):
   installation, since gem5 unfortunately will not accept Zig's internal Clang
 - [git](https://git-scm.com/), [make](https://www.gnu.org/software/make/),
   [m4](https://www.gnu.org/software/m4/m4.html)
-- A full [TeX Live](https://tug.org/texlive/) distribution to generate the
-  report
+- A TeX distribution (a full [TeX Live](https://tug.org/texlive/) is the
+  easiest option, but [TinyTeX](https://yihui.org/tinytex/) also works) to:
+  (1) render plot text in [visualize_results.py](visualize_results.py)
+  (Matplotlib `text.usetex=True` via SciencePlots), and (2) build the report.
+  At minimum, `latex`, `dvipng`, `pdflatex`, and `bibtex` must be on `PATH`.
 - [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot`
   to PDF (the Python binding `pydot` is installed via `requirements.txt`)
 - *Optionally*, [Google Performance
@@ -128,6 +131,42 @@ the hardware. The full simulations usually take hours to a few days, as the
 build caps parallel workers to 9 to reduce OOM risks. Upon finishing, figures
 and PDF report appear under `figures/` and `report/`.
 
+
+## Using [mise-en-place](https://mise.jdx.dev/)
+
+### Set up requirements
+
+On [Debian Trixie](https://www.debian.org/releases/trixie/):
+
+```bash
+sudo apt install curl gcc g++ make m4 git graphviz gpg libgoogle-perftools-dev zlib1g-dev
+curl https://mise.run | sh && export PATH="$HOME/.local/bin:$PATH"
+```
+
+On [Fedora 41](https://fedoraproject.org/)/[RHEL Stream 9](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux)/[CentOS Stram 9](https://www.centos.org/) (run as superuser):
+
+```bash
+dnf copr enable jdxcode/mise
+dnf install curl gcc gcc-c++ make m4 git graphviz gpg gperftools-devel zlib-devel mise
+```
+
+On [Arch Linux](https://archlinux.org/) (run as superuser):
+
+```bash
+pacman -S --needed curl gcc make m4 git graphviz gpg gperftools zlib mise
+```
+
+### Clone repo, trust config, and build
+
+```bash
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.1 --depth=1 --recursive --shallow-submodules
+cd AC3-TP1
+mise trust
+mise run setup-tex # If using TinyTeX from mise: install required TeX packages
+mise run build # Build simulator and workloads
+mise run simulate # Run simulations and collect results
+mise run report # Build LaTeX report
+```
 
 ## Incremental Workflow
 

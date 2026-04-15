@@ -49,6 +49,8 @@ const all_dependencies = [_]DepInfo{
     .{ .cmd = "m4", .description = "Macro processor", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "dot", .description = "Graph visualization (for diagrams)", .required_for = &.{ "simulations", "report" } },
     .{ .cmd = "make", .description = "Build automation (for report)", .required_for = &.{"report"} },
+    .{ .cmd = "latex", .description = "LaTeX engine (for matplotlib usetex in visualizations)", .required_for = &.{ "visualize", "report" } },
+    .{ .cmd = "dvipng", .description = "DVI to PNG converter (for matplotlib usetex)", .required_for = &.{ "visualize", "report" } },
     .{ .cmd = "pdflatex", .description = "LaTeX compiler (for report)", .required_for = &.{"report"} },
     .{ .cmd = "bibtex", .description = "Bibliography processor (for report)", .required_for = &.{"report"} },
 };
