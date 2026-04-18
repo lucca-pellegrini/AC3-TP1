@@ -137,7 +137,7 @@ def ensure_usetex_dependencies() -> None:
             "\n\nFix options:\n"
             "  - System TeX Live: install a full TeX Live, or at least packages providing 'latex' and 'dvipng'.\n"
             "  - TinyTeX (mise): `mise install` then `mise run setup-tex` (installs dvipng + common LaTeX/font packages).\n"
-            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng collection-latexextra collection-fontsrecommended`.\n"
+            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile interfaces`.\n"
         )
 
 
@@ -352,8 +352,13 @@ class SimulationStats:
     """Complete statistics from a single simulation run."""
 
     workload: str = ""
-    config_type: str = ""  # 'cache_config', 'cache_line', 'l1_assoc', 'l2_assoc', 'l3_assoc', 'baseline'
+    config_type: str = (
+        ""  # 'cache_config', 'cache_line', 'l1_assoc', 'l2_assoc', 'l3_assoc', 'baseline'
+    )
     config_value: str = ""  # The actual value
+
+    # Provenance
+    stats_path: Optional[Path] = None
 
     # CPU stats
     sim_insts: int = 0
@@ -407,6 +412,7 @@ def parse_stats_file(stats_path: Path) -> Optional[SimulationStats]:
         return None
 
     stats = SimulationStats()
+    stats.stats_path = stats_path
 
     # Parse directory name to get workload and config
     dir_name = stats_path.parent.name
@@ -623,10 +629,83 @@ def _delta_vs_baseline(
     return deltas, baseline_idx
 
 
+@dataclass
+class FigureBuildStats:
+    generated: int = 0
+    skipped: int = 0
+
+
+def _note_generated(st: FigureBuildStats) -> None:
+    st.generated += 1
+
+
+def _note_skipped(st: FigureBuildStats) -> None:
+    st.skipped += 1
+
+
+def _safe_mtime(path: Path) -> Optional[float]:
+    try:
+        return path.stat().st_mtime
+    except Exception:
+        return None
+
+
+def _outputs_up_to_date(outputs: Sequence[Path], inputs: Sequence[Path]) -> bool:
+    """Return True if every output exists and is newer than all inputs."""
+    if not outputs or not inputs:
+        return False
+
+    in_mtimes: List[float] = []
+    for p in inputs:
+        mt = _safe_mtime(p)
+        if mt is not None:
+            in_mtimes.append(mt)
+    if not in_mtimes:
+        return False
+    newest_input = max(in_mtimes)
+
+    out_mtimes: List[float] = []
+    for p in outputs:
+        if not p.exists():
+            return False
+        mt = _safe_mtime(p)
+        if mt is None:
+            return False
+        out_mtimes.append(mt)
+
+    oldest_output = min(out_mtimes)
+    return oldest_output >= newest_input
+
+
+def _input_paths(stats_list: Sequence[SimulationStats]) -> List[Path]:
+    paths: List[Path] = []
+    for s in stats_list:
+        p = getattr(s, "stats_path", None)
+        if isinstance(p, Path):
+            paths.append(p)
+    return paths
+
+
+def _gather_stats_for_param(
+    all_results: Dict[str, List[SimulationStats]],
+    param_type: str,
+    workloads: Sequence[str],
+) -> List[SimulationStats]:
+    used: List[SimulationStats] = []
+    for wl in workloads:
+        if wl not in all_results:
+            continue
+        _, filtered = get_sorted_data(all_results[wl], param_type)
+        if filtered:
+            used.extend(filtered)
+    return used
+
+
 def create_workload_figures(
     workload: str,
     stats_list: List[SimulationStats],
     figures_dir: Path,
+    build_stats: FigureBuildStats,
 ) -> None:
     """Create all figures for a single workload."""
 
@@ -650,6 +729,12 @@ def create_workload_figures(
     for param_type in param_types:
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_miss_rate_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_miss_rate_vs_{param_type}.png"
+        if _outputs_up_to_date([out_pdf], _input_paths(filtered)):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -710,9 +795,10 @@ def create_workload_figures(
                     ax.set_xlabel(xlabel)
                 ax.legend(loc="best")
                 plt.tight_layout()
-                fig.savefig(figures_dir / f"{workload}_miss_rate_vs_{param_type}.pdf")
-                fig.savefig(figures_dir / f"{workload}_miss_rate_vs_{param_type}.png")
+                fig.savefig(out_pdf)
+                fig.savefig(out_png)
                 plt.close(fig)
+                _note_generated(build_stats)
                 continue
 
             # Default path: one subplot per metric (used for cache_config and per-level assoc)
@@ -781,9 +867,10 @@ def create_workload_figures(
                 axes[-1].set_xlabel(xlabel)
 
             plt.tight_layout()
-            fig.savefig(figures_dir / f"{workload}_miss_rate_vs_{param_type}.pdf")
-            fig.savefig(figures_dir / f"{workload}_miss_rate_vs_{param_type}.png")
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
     # =========================================================================
     # Figure 2: MPKI for each param
@@ -792,6 +879,12 @@ def create_workload_figures(
     for param_type in param_types:
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_mpki_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_mpki_vs_{param_type}.png"
+        if _outputs_up_to_date([out_pdf], _input_paths(filtered)):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -850,9 +943,10 @@ def create_workload_figures(
                     ax.set_xlabel(xlabel)
                 ax.legend(loc="best")
                 plt.tight_layout()
-                fig.savefig(figures_dir / f"{workload}_mpki_vs_{param_type}.pdf")
-                fig.savefig(figures_dir / f"{workload}_mpki_vs_{param_type}.png")
+                fig.savefig(out_pdf)
+                fig.savefig(out_png)
                 plt.close(fig)
+                _note_generated(build_stats)
                 continue
 
             # Default: stacked subplots for categorical or per-level plots
@@ -918,9 +1012,10 @@ def create_workload_figures(
                 axes[-1].set_xlabel(xlabel)
 
             plt.tight_layout()
-            fig.savefig(figures_dir / f"{workload}_mpki_vs_{param_type}.pdf")
-            fig.savefig(figures_dir / f"{workload}_mpki_vs_{param_type}.png")
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
     # =========================================================================
     # Figure 3: CPI only (single plot) for each param
@@ -928,6 +1023,12 @@ def create_workload_figures(
     for param_type in param_types:
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_cpi_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_cpi_vs_{param_type}.png"
+        if _outputs_up_to_date([out_pdf], _input_paths(filtered)):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -986,13 +1087,10 @@ def create_workload_figures(
                 ax.set_xlabel(xlabel)
 
             plt.tight_layout()
-            fig.savefig(
-                figures_dir / f"{workload}_cpi_vs_{param_type}.pdf",
-            )
-            fig.savefig(
-                figures_dir / f"{workload}_cpi_vs_{param_type}.png",
-            )
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
     # =========================================================================
     # Figure 4: Memory Stalls for each param
@@ -1000,6 +1098,12 @@ def create_workload_figures(
     for param_type in param_types:
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_memory_stalls_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_memory_stalls_vs_{param_type}.png"
+        if _outputs_up_to_date([out_pdf], _input_paths(filtered)):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -1068,13 +1172,10 @@ def create_workload_figures(
                 ax.set_xlabel(xlabel)
 
             plt.tight_layout()
-            fig.savefig(
-                figures_dir / f"{workload}_memory_stalls_vs_{param_type}.pdf",
-            )
-            fig.savefig(
-                figures_dir / f"{workload}_memory_stalls_vs_{param_type}.png",
-            )
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
     # =========================================================================
     # Figure 5: Relative Speedup for each param
@@ -1082,6 +1183,15 @@ def create_workload_figures(
     for param_type in param_types:
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_speedup_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_speedup_vs_{param_type}.png"
+        # Speedup uses a workload-level baseline IPC; include baseline stats.txt
+        # as an input dependency so changes to the baseline trigger regeneration.
+        speedup_inputs = _input_paths(filtered) + _input_paths(baseline_stats)
+        if _outputs_up_to_date([out_pdf], speedup_inputs):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -1162,13 +1272,10 @@ def create_workload_figures(
                 ax.set_xlabel(xlabel)
 
             plt.tight_layout()
-            fig.savefig(
-                figures_dir / f"{workload}_speedup_vs_{param_type}.pdf",
-            )
-            fig.savefig(
-                figures_dir / f"{workload}_speedup_vs_{param_type}.png",
-            )
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
     # =========================================================================
     # Combined Figure: All Miss Rates on same plot (for comparison)
@@ -1182,6 +1289,12 @@ def create_workload_figures(
 
         x_values, filtered = get_sorted_data(stats_list, param_type)
         if not filtered:
+            continue
+
+        out_pdf = figures_dir / f"{workload}_all_miss_rates_vs_{param_type}.pdf"
+        out_png = figures_dir / f"{workload}_all_miss_rates_vs_{param_type}.png"
+        if _outputs_up_to_date([out_pdf], _input_paths(filtered)):
+            _note_skipped(build_stats)
             continue
 
         with plt.style.context(STYLE_LIST):
@@ -1284,14 +1397,16 @@ def create_workload_figures(
             ax.legend(loc="best")
 
             plt.tight_layout()
-            fig.savefig(figures_dir / f"{workload}_all_miss_rates_vs_{param_type}.pdf")
-            fig.savefig(figures_dir / f"{workload}_all_miss_rates_vs_{param_type}.png")
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+            _note_generated(build_stats)
 
 
 def create_comparison_figures(
     all_results: Dict[str, List[SimulationStats]],
     figures_dir: Path,
+    build_stats: FigureBuildStats,
 ) -> None:
     """Create comparison figures across all workloads."""
 
@@ -1308,120 +1423,131 @@ def create_comparison_figures(
     for param_type in param_types:
         is_categorical = param_type == "cache_config"
 
-        # IPC comparison across workloads
-        with plt.style.context(STYLE_LIST):
-            st = get_style_params()
-            fig, ax = plt.subplots(figsize=(3.45, 2.5))
-            if is_categorical:
-                all_x_values: Optional[Sequence[Union[str, int]]] = None
-                workload_data: Dict[str, List[float]] = {}
-                baseline_idx_global: Optional[int] = None
-                for workload in POLYBENCH_WORKLOADS:
-                    if workload not in all_results:
-                        continue
-                    x_values, filtered = get_sorted_data(
-                        all_results[workload], param_type
-                    )
-                    if filtered:
-                        # Capture the canonical x_values from the first workload encountered
-                        if all_x_values is None:
-                            all_x_values = x_values
-                            baseline_idx_global = next(
-                                (
-                                    i
-                                    for i, s in enumerate(filtered)
-                                    if s.config_value == "baseline"
-                                    or s.config_type == "baseline"
-                                ),
-                                None,
-                            )
+        out_pdf = figures_dir / f"comparison_ipc_vs_{param_type}.pdf"
+        out_png = figures_dir / f"comparison_ipc_vs_{param_type}.png"
+        used_stats = _gather_stats_for_param(
+            all_results, param_type, POLYBENCH_WORKLOADS
+        )
+        if not used_stats:
+            continue
+        if used_stats and _outputs_up_to_date([out_pdf], _input_paths(used_stats)):
+            _note_skipped(build_stats)
+        else:
+            # IPC comparison across workloads
+            with plt.style.context(STYLE_LIST):
+                st = get_style_params()
+                fig, ax = plt.subplots(figsize=(3.45, 2.5))
+                if is_categorical:
+                    all_x_values: Optional[Sequence[Union[str, int]]] = None
+                    workload_data: Dict[str, List[float]] = {}
+                    baseline_idx_global: Optional[int] = None
+                    for workload in POLYBENCH_WORKLOADS:
+                        if workload not in all_results:
+                            continue
+                        x_values, filtered = get_sorted_data(
+                            all_results[workload], param_type
+                        )
+                        if filtered:
+                            # Capture the canonical x_values from the first workload encountered
+                            if all_x_values is None:
+                                all_x_values = x_values
+                                baseline_idx_global = next(
+                                    (
+                                        i
+                                        for i, s in enumerate(filtered)
+                                        if s.config_value == "baseline"
+                                        or s.config_type == "baseline"
+                                    ),
+                                    None,
+                                )
 
-                        def _ipc_extractor(s: SimulationStats) -> float:
-                            return s.ipc
+                            def _ipc_extractor(s: SimulationStats) -> float:
+                                return s.ipc
 
-                        y_vals, _ = _delta_vs_baseline(filtered, _ipc_extractor)
-                        workload_data[workload] = y_vals
+                            y_vals, _ = _delta_vs_baseline(filtered, _ipc_extractor)
+                            workload_data[workload] = y_vals
 
-                if all_x_values and workload_data:
-                    # Remove baseline column from x and from each workload's y-values
-                    if baseline_idx_global is not None:
-                        x_vals_plot = [
-                            v
-                            for i, v in enumerate(all_x_values)
-                            if i != baseline_idx_global
-                        ]
-                    else:
-                        x_vals_plot = list(all_x_values)
-
-                    n_groups = len(x_vals_plot)
-                    n_bars = len(workload_data)
-                    bar_width = 0.8 / n_bars
-                    x_numeric = np.arange(n_groups)
-                    # Extend IEEE style colors to cover all workloads if needed
-                    st["colors"] = expand_color_cycle(st["colors"], n_bars)
-                    for idx, (workload, y_values) in enumerate(workload_data.items()):
+                    if all_x_values and workload_data:
+                        # Remove baseline column from x and from each workload's y-values
                         if baseline_idx_global is not None:
-                            y_plot = [
-                                yv
-                                for i, yv in enumerate(y_values)
+                            x_vals_plot = [
+                                v
+                                for i, v in enumerate(all_x_values)
                                 if i != baseline_idx_global
                             ]
                         else:
-                            y_plot = y_values
-                        offset = (idx - n_bars / 2 + 0.5) * bar_width
-                        ax.bar(
-                            x_numeric + offset,
-                            y_plot,
-                            width=bar_width,
+                            x_vals_plot = list(all_x_values)
+
+                        n_groups = len(x_vals_plot)
+                        n_bars = len(workload_data)
+                        bar_width = 0.8 / n_bars
+                        x_numeric = np.arange(n_groups)
+                        # Extend IEEE style colors to cover all workloads if needed
+                        st["colors"] = expand_color_cycle(st["colors"], n_bars)
+                        for idx, (workload, y_values) in enumerate(
+                            workload_data.items()
+                        ):
+                            if baseline_idx_global is not None:
+                                y_plot = [
+                                    yv
+                                    for i, yv in enumerate(y_values)
+                                    if i != baseline_idx_global
+                                ]
+                            else:
+                                y_plot = y_values
+                            offset = (idx - n_bars / 2 + 0.5) * bar_width
+                            ax.bar(
+                                x_numeric + offset,
+                                y_plot,
+                                width=bar_width,
+                                color=st["colors"][idx % len(st["colors"])],
+                                label=workload,
+                                alpha=0.8,
+                                edgecolor="black",
+                                linewidth=0.5,
+                            )
+                        ax.axhline(0, color="black", linestyle="-", linewidth=0.5)
+                        ax.set_xticks(x_numeric)
+                        ax.set_xticklabels(
+                            [str(x) for x in x_vals_plot], rotation=45, ha="right"
+                        )
+                else:
+                    for idx, workload in enumerate(POLYBENCH_WORKLOADS):
+                        if workload not in all_results:
+                            continue
+                        x_values, filtered = get_sorted_data(
+                            all_results[workload], param_type
+                        )
+                        if not filtered:
+                            continue
+                        y_values = [s.ipc for s in filtered]
+                        kw = _series_style_kwargs(
+                            idx,
+                            linestyles=st["linestyles"],
+                            markers=st["markers"],
+                            line_width=st["linewidth"],
+                            marker_size=st["markersize"],
+                        )
+                        ax.plot(
+                            x_values,
+                            y_values,
                             color=st["colors"][idx % len(st["colors"])],
                             label=workload,
-                            alpha=0.8,
-                            edgecolor="black",
-                            linewidth=0.5,
+                            **kw,
                         )
-                    ax.axhline(0, color="black", linestyle="-", linewidth=0.5)
-                    ax.set_xticks(x_numeric)
-                    ax.set_xticklabels(
-                        [str(x) for x in x_vals_plot], rotation=45, ha="right"
-                    )
-            else:
-                for idx, workload in enumerate(POLYBENCH_WORKLOADS):
-                    if workload not in all_results:
-                        continue
-                    x_values, filtered = get_sorted_data(
-                        all_results[workload], param_type
-                    )
-                    if not filtered:
-                        continue
-                    y_values = [s.ipc for s in filtered]
-                    kw = _series_style_kwargs(
-                        idx,
-                        linestyles=st["linestyles"],
-                        markers=st["markers"],
-                        line_width=st["linewidth"],
-                        marker_size=st["markersize"],
-                    )
-                    ax.plot(
-                        x_values,
-                        y_values,
-                        color=st["colors"][idx % len(st["colors"])],
-                        label=workload,
-                        **kw,
-                    )
 
-            ax.set_ylabel(("$\\Delta$ IPC vs baseline") if is_categorical else "IPC")
-            xlabel = XLABEL_MAP.get(param_type, param_type)
-            if xlabel:
-                ax.set_xlabel(xlabel)
-            ax.legend(loc="best")
-            plt.tight_layout()
-            fig.savefig(
-                figures_dir / f"comparison_ipc_vs_{param_type}.pdf",
-            )
-            fig.savefig(
-                figures_dir / f"comparison_ipc_vs_{param_type}.png",
-            )
-            plt.close(fig)
+                ax.set_ylabel(
+                    ("$\\Delta$ IPC vs baseline") if is_categorical else "IPC"
+                )
+                xlabel = XLABEL_MAP.get(param_type, param_type)
+                if xlabel:
+                    ax.set_xlabel(xlabel)
+                ax.legend(loc="best")
+                plt.tight_layout()
+                fig.savefig(out_pdf)
+                fig.savefig(out_png)
+                plt.close(fig)
+            _note_generated(build_stats)
 
         # L1D Miss Rate comparison across workloads
         # Skip generating L1D comparison plots for parameter types that are
@@ -1437,6 +1563,17 @@ def create_comparison_figures(
         # any cache-level change. We only early-continue for the L1D miss-rate
         # comparison block below, so ensure IPC block remains above this check
         # if you reorder code.
+
+        out_pdf = figures_dir / f"comparison_l1d_miss_rate_vs_{param_type}.pdf"
+        out_png = figures_dir / f"comparison_l1d_miss_rate_vs_{param_type}.png"
+        used_stats = _gather_stats_for_param(
+            all_results, param_type, POLYBENCH_WORKLOADS
+        )
+        if not used_stats:
+            continue
+        if used_stats and _outputs_up_to_date([out_pdf], _input_paths(used_stats)):
+            _note_skipped(build_stats)
+            continue
 
         # L1D Miss Rate comparison across workloads
         with plt.style.context(STYLE_LIST):
@@ -1517,13 +1654,10 @@ def create_comparison_figures(
             ax.set_xlabel(xlabel_map.get(param_type, param_type))
             ax.legend(loc="best")
             plt.tight_layout()
-            fig.savefig(
-                figures_dir / f"comparison_l1d_miss_rate_vs_{param_type}.pdf",
-            )
-            fig.savefig(
-                figures_dir / f"comparison_l1d_miss_rate_vs_{param_type}.png",
-            )
+            fig.savefig(out_pdf)
+            fig.savefig(out_png)
             plt.close(fig)
+        _note_generated(build_stats)
 
 
 def save_results_csv(
@@ -1653,12 +1787,6 @@ def main():
     # Create figures directory
     figures_dir.mkdir(exist_ok=True)
 
-    print("gem5 Cache Simulation Results Visualization")
-    print("=" * 50)
-    print(f"Results directory: {results_dir}")
-    print(f"Figures directory: {figures_dir}")
-    print()
-
     # The plotting style requires LaTeX. Fail fast with actionable guidance.
     try:
         ensure_usetex_dependencies()
@@ -1680,17 +1808,20 @@ def main():
     print()
 
     # Generate figures for each workload
+    build_stats = FigureBuildStats()
     for workload in POLYBENCH_WORKLOADS:
         if workload not in all_results:
             print(f"WARNING: No results found for {workload}")
             continue
 
         print(f"Generating figures for {workload}...")
-        create_workload_figures(workload, all_results[workload], figures_dir)
+        create_workload_figures(
+            workload, all_results[workload], figures_dir, build_stats
+        )
 
     # Generate comparison figures
     print("Generating comparison figures...")
-    create_comparison_figures(all_results, figures_dir)
+    create_comparison_figures(all_results, figures_dir, build_stats)
 
     # Save all numerical results to CSV using pandas
     try:
@@ -1698,21 +1829,19 @@ def main():
     except Exception as e:
         print("WARNING: failed to save simulation CSV:", e)
 
-    print()
-    print("=" * 50)
-    print("Done! Figures saved to:", figures_dir)
-    print()
-    print("Generated figure types for each workload:")
-    print("  - miss_rate_vs_<param>.pdf/png  : L1D/L2/L3 miss rates (stacked)")
-    print("  - mpki_vs_<param>.pdf/png       : L1D/L2/L3 MPKI (stacked)")
-    print("  - ipc_cpi_vs_<param>.pdf/png    : IPC and CPI")
-    print("  - memory_stalls_vs_<param>.pdf/png : Total miss latency")
-    print("  - speedup_vs_<param>.pdf/png    : Relative speedup vs baseline")
-    print("  - all_miss_rates_vs_<param>.pdf/png : All miss rates on log scale")
-    print()
-    print("Cross-workload comparison figures:")
-    print("  - comparison_ipc_vs_<param>.pdf/png")
-    print("  - comparison_l1d_miss_rate_vs_<param>.pdf/png")
+    # Final colored notice
+    total = build_stats.generated + build_stats.skipped
+    bold = "\033[1m"
+    reset = "\033[0m"
+    green = "\033[32m"
+    yellow = "\033[33m"
+    blue = "\033[34m"
+    default = "\033[39m"
+    print(
+        f"\n{bold}{green}{build_stats.generated}{default} figures generated, "
+        f"{yellow}{build_stats.skipped}{default} skipped, out of "
+        f"{blue}{total}{default}{reset}"
+    )
 
 
 if __name__ == "__main__":
