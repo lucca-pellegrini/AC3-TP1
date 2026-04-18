@@ -137,7 +137,7 @@ def ensure_usetex_dependencies() -> None:
             "\n\nFix options:\n"
             "  - System TeX Live: install a full TeX Live, or at least packages providing 'latex' and 'dvipng'.\n"
             "  - TinyTeX (mise): `mise install` then `mise run setup-tex` (installs dvipng + common LaTeX/font packages).\n"
-            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile interfaces`.\n"
+            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile`.\n"
         )
 
 

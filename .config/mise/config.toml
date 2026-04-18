@@ -4,9 +4,6 @@ uv = "0.11.6"
 
 [tasks]
 build = { run = "zig build workloads gem5" }
-# TinyTeX is a minimal TeX Live; install the bits Matplotlib's `usetex` needs.
-# SciencePlots' `ieee` style pulls in Times/Palatino-related packages which in
-# turn require `type1cm` (scalable Computer Modern) and often `cm-super`.
-setup-tex = { run = ["tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile interfaces", "mktexlsr"], tools = { tinytex = "2026.04" } }
+setup-tex = { run = ["tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile", "mktexlsr"], tools = { tinytex = "2026.04" } }
 simulate = { run = "zig build simulations" }
 report = { depends = ["setup-tex"], run = "zig build report" }
