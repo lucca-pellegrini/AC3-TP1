@@ -3,7 +3,15 @@ zig = "0.15.2"
 uv = "0.11.6"
 
 [tasks]
+setup-tex = { run =
+  '''
+  for f in IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty
+  do
+	kpsewhich "$f" >/dev/null 2>&1 || echo "$f" missing
+  done | grep missing &&
+	tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile ||
+	:
+  ''', tools = { tinytex = "2026.04" } }
 build = { run = "zig build workloads gem5" }
-setup-tex = { run = ["tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile", "mktexlsr"], tools = { tinytex = "2026.04" } }
 simulate = { run = "zig build simulations" }
 report = { depends = ["setup-tex"], run = "zig build report" }
