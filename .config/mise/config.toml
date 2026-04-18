@@ -2,16 +2,29 @@
 zig = "0.15.2"
 uv = "0.11.6"
 
-[tasks]
-setup-tex = { run =
-  '''
-  for f in IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty
-  do
-	kpsewhich "$f" >/dev/null 2>&1 || echo "$f" missing
-  done | grep missing &&
-	tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile ||
-	:
-  ''', tools = { tinytex = "2026.04" } }
-build = { run = "zig build workloads gem5" }
-simulate = { run = "zig build simulations" }
-report = { depends = ["setup-tex"], run = "zig build report" }
+[tasks.build]
+description = "Build the workloads and the Gem5 simulator"
+run = "zig build workloads gem5"
+
+[tasks.simulate]
+description = "Run all simulations and collect results"
+run = "zig build simulations"
+
+[tasks.report]
+description = "Run the entire build and simulation pipeline and generate report"
+run = "zig build report"
+depends = ["setup-tex"]
+tools = { tinytex = "2026.04", just = "1.49.0" }
+
+[tasks.setup-tex]
+description = "Set up required TeX packages for the plots and report"
+run = '''
+    for file in IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty
+    do
+        kpsewhich "$file" >/dev/null 2>&1 || echo File "$file" is missing
+    done | grep missing &&
+        tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile ||
+        echo All TeX dependencies met
+    '''
+tools = { tinytex = "2026.04" }
+hide = true

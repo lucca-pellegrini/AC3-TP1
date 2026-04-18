@@ -23,10 +23,9 @@ final LaTeX report.
 Target platform: Linux x86_64 only. While gem5 itself is portable, parts of the
 automation (uv/Python setup and LaTeX/report build) are written for Linux.
 
-
 ## Full Demonstration
-[![asciicast](https://asciinema.org/a/Iqcv0OSyuDhDmM5C.svg)](https://asciinema.org/a/Iqcv0OSyuDhDmM5C?t=75)
 
+[![asciicast](https://asciinema.org/a/Iqcv0OSyuDhDmM5C.svg)](https://asciinema.org/a/Iqcv0OSyuDhDmM5C?t=75)
 
 ## What’s Here
 
@@ -48,14 +47,12 @@ automation (uv/Python setup and LaTeX/report build) are written for Linux.
 - [report/](report/): IEEEtran paper sources; [report/main.tex](report/main.tex) is the manuscript
 - [gem5/](https://github.com/gem5/gem5/tree/7a2b0e4): gem5 submodule (initialized by the build)
 
-
 ## Who Made This
 
 See [AUTHORS](AUTHORS) for the full list and contact emails. If you use these
 artifacts, please cite the work described in
 [report/main.tex](report/main.tex). A machine-readable
 [CITATION.cff](CITATION.cff) is provided.
-
 
 ## Summary Of The Experiment
 
@@ -74,36 +71,29 @@ artifacts, please cite the work described in
 
 Dataset choices compiled into the real-run workloads:
 
-| Kernel           | Dataset | Notes/Dimensions (from report)                    |
-|------------------|---------|---------------------------------------------------|
-| atax             | LARGE   | M=1900, N=2100                                    |
-| gemm             | MEDIUM  | NI=200, NJ=220, NK=240                            |
-| floyd-warshall   | SMALL   | N=180                                             |
-| jacobi-2d        | MEDIUM  | N=250, T=100                                      |
-| seidel-2d        | MEDIUM  | N=400, T=100                                      |
-
+| Kernel         | Dataset | Notes/Dimensions (from report) |
+| -------------- | ------- | ------------------------------ |
+| atax           | LARGE   | M=1900, N=2100                 |
+| gemm           | MEDIUM  | NI=200, NJ=220, NK=240         |
+| floyd-warshall | SMALL   | N=180                          |
+| jacobi-2d      | MEDIUM  | N=250, T=100                   |
+| seidel-2d      | MEDIUM  | N=400, T=100                   |
 
 ## Prerequisites (Linux)
 
 Required (checked by `zig build check-deps`):
-- [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app) recommended)
-- [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside
-  gem5/venv)
-- A system-wide [GCC](https://gcc.gnu.org/) or [Clang](https://clang.llvm.org/)
-  installation, since gem5 unfortunately will not accept Zig's internal Clang
-- [git](https://git-scm.com/), [make](https://www.gnu.org/software/make/),
-  [m4](https://www.gnu.org/software/m4/m4.html)
-- A TeX distribution (a full [TeX Live](https://tug.org/texlive/) is the
-  easiest option, but [TinyTeX](https://yihui.org/tinytex/) also works) to:
-  (1) render plot text in [visualize_results.py](visualize_results.py)
-  (Matplotlib `text.usetex=True` via SciencePlots), and (2) build the report.
-  At minimum, `latex`, `dvipng`, `pdflatex`, and `bibtex` must be on `PATH`.
-- [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot`
-  to PDF (the Python binding `pydot` is installed via `requirements.txt`)
-- *Optionally*, [Google Performance
-  Tools](https://github.com/gperftools/gperftools) for the
-  [`tcmalloc`](https://github.com/google/tcmalloc) implementation, which speeds
-  up gem5 a lot.
+
+- [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app)/[mise](https://mise.jdx.dev/) recommended)
+- [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside gem5/venv)
+- A system-wide [GCC](https://gcc.gnu.org/) or [Clang](https://clang.llvm.org/) installation, since gem5 unfortunately will
+  not accept Zig's internal Clang
+- [git](https://git-scm.com/), [just](https://just.systems/), and [m4](https://www.gnu.org/software/m4/m4.html) to fetch and build gem5, as well as the report
+- A TeX distribution to generate plots and the report (a full [TeX Live](https://tug.org/texlive/) is the
+  easiest option, but [TinyTeX](https://yihui.org/tinytex/) may also work).
+- [Graphviz](https://graphviz.org/) (`dot` on PATH) to render gem5 `config.dot` to PDF (the Python binding
+  `pydot` is installed via `requirements.txt`)
+- _Optionally_, [gperftools](https://github.com/gperftools/gperftools) for the [`tcmalloc`](https://github.com/google/tcmalloc) implementation, which speeds up
+  gem5 a lot.
 
 ## Quick Start
 
@@ -131,7 +121,6 @@ the hardware. The full simulations usually take hours to a few days, as the
 build caps parallel workers to 9 to reduce OOM risks. Upon finishing, figures
 and PDF report appear under `figures/` and `report/`.
 
-
 ## Using [mise-en-place](https://mise.jdx.dev/)
 
 ### Set up requirements
@@ -139,36 +128,34 @@ and PDF report appear under `figures/` and `report/`.
 On [Debian Trixie](https://www.debian.org/releases/trixie/):
 
 ```bash
-sudo apt install curl gcc g++ make m4 git graphviz gpg libgoogle-perftools-dev zlib1g-dev
+sudo apt install curl gcc g++ m4 git graphviz libgoogle-perftools-dev zlib1g-dev
 curl https://mise.run | sh && export PATH="$HOME/.local/bin:$PATH"
 ```
 
-On [Fedora 41](https://fedoraproject.org/)/[RHEL Stream 9](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux)/[CentOS Stram 9](https://www.centos.org/) (run as superuser):
+On [Fedora 43](https://fedoraproject.org/)/[RHEL 10](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux)/[CentOS Stream 10](https://www.centos.org/)/[Rocky 10](https://rockylinux.org/)/[Alma 10](https://almalinux.org/) (run as superuser):
 
 ```bash
+dnf install 'dnf-command(copr)'
 dnf copr enable jdxcode/mise
-dnf install curl gcc gcc-c++ glibc-devel libstdc++-devel make m4 git graphviz gpg gperftools-devel zlib-devel mise
+dnf install curl gcc gcc-c++ glibc-devel libstdc++-devel m4 git graphviz zlib-devel mise
 ```
 
 On [Arch Linux](https://archlinux.org/) (run as superuser):
 
 ```bash
-pacman -S --needed curl gcc make m4 git graphviz gpg gperftools zlib mise
+pacman -S --needed curl gcc m4 git graphviz gperftools zlib mise
 ```
 
-### Clone repo, trust config, and build
+### Clone repo, trust config, and run
 
 ```bash
-git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.1 --depth=1 --recursive --shallow-submodules
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --depth=1 --shallow-submodules --recursive --branch=v0.1.1
 cd AC3-TP1
 mise trust
-mise setup-tex # If using TinyTeX from mise: install required TeX packages
-mise build # Build simulator and workloads
-mise simulate # Run simulations and collect results
-mise report # Build LaTeX report
+mise run # Or `mise report` to immediately run the entire build/simulation pipeline
 ```
 
-## Incremental Workflow
+## Manual Workflow
 
 ![Running pipeline up to workload compilation from a fresh clone](demo/workload-compilation-demo.gif)
 
@@ -202,7 +189,6 @@ zig build report
 
 All steps are idempotent. You can interrupt long runs and rerun the same step
 later; remaining items will continue.
-
 
 ## Running One-Off Simulations
 
@@ -240,7 +226,6 @@ Or invoke the orchestrator for just one workload:
   --dry-run --results-dir=results ./gem5/build/X86/gem5.fast ./zig-out/bin/jacobi-2d
 ```
 
-
 ## Results Layout
 
 Each simulation stores its outputs under `results/<workload>_<variant>/`. The
@@ -251,7 +236,6 @@ orchestrator drops a `.completed` marker so subsequent invocations can resume
 cleanly without redoing work. The plotting stage reads all runs from
 `results/`, writes publication figures to `figures/`, and the paper
 ([report/main.tex](report/main.tex)) imports those figures directly.
-
 
 ## Reproducibility Choices
 
@@ -264,7 +248,6 @@ and are linked statically to reduce host‑dependency variance (see
 resumable; it caps parallelism at `min(9, nproc)` to avoid oversubscription and
 out‑of‑memory failures.
 
-
 ## Licensing
 
 Unless a file states otherwise, source code in this repository is licensed
@@ -274,7 +257,6 @@ under [CC BY-SA 4.0](report/LICENSE). The gem5 submodule remains under its own
 upstream license, and the PolyBench workloads in [workloads/](workloads) remain
 under the [Ohio State University Software Distribution
 License](https://github.com/MatthiasJReisinger/PolyBenchC-4.2.1/blob/3e87254/LICENSE.txt).
-
 
 ## Citing
 

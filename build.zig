@@ -47,12 +47,12 @@ const all_dependencies = [_]DepInfo{
     .{ .cmd = "cc", .description = "C compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "c++", .description = "C++ compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "m4", .description = "Macro processor", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
-    .{ .cmd = "dot", .description = "Graph visualization (for diagrams)", .required_for = &.{ "simulations", "report" } },
-    .{ .cmd = "make", .description = "Build automation (for report)", .required_for = &.{"report"} },
-    .{ .cmd = "latex", .description = "LaTeX engine (for matplotlib usetex in visualizations)", .required_for = &.{ "visualize", "report" } },
-    .{ .cmd = "dvipng", .description = "DVI to PNG converter (for matplotlib usetex)", .required_for = &.{ "visualize", "report" } },
-    .{ .cmd = "pdflatex", .description = "LaTeX compiler (for report)", .required_for = &.{"report"} },
-    .{ .cmd = "bibtex", .description = "Bibliography processor (for report)", .required_for = &.{"report"} },
+    .{ .cmd = "dot", .description = "Graph visualization, for diagrams", .required_for = &.{ "simulations", "report" } },
+    .{ .cmd = "just", .description = "Build automation, for report", .required_for = &.{"report"} },
+    .{ .cmd = "latex", .description = "LaTeX engine, for matplotlib usetex in visualizations", .required_for = &.{ "visualize", "report" } },
+    .{ .cmd = "dvipng", .description = "DVI to PNG converter, for matplotlib usetex", .required_for = &.{ "visualize", "report" } },
+    .{ .cmd = "pdflatex", .description = "LaTeX compiler, for report", .required_for = &.{"report"} },
+    .{ .cmd = "bibtex", .description = "Bibliography processor, for report", .required_for = &.{"report"} },
 };
 
 // Targets and their transitive dependencies (what targets they depend on)
@@ -767,7 +767,7 @@ fn buildReport(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!vo
 
     const report_result = std.process.Child.run(.{
         .allocator = allocator,
-        .argv = &[_][]const u8{ "make", "-C", "report/", "all" },
+        .argv = &[_][]const u8{ "just", "-d", "report/", "--justfile", "report/.justfile", "all" },
     }) catch |report_err| {
         std.debug.print("\x1b[1;31mFailed to build report: {}\x1b[0m\n", .{report_err});
         return report_err;
