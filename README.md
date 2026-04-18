@@ -147,7 +147,7 @@ On [Fedora 41](https://fedoraproject.org/)/[RHEL Stream 9](https://www.redhat.co
 
 ```bash
 dnf copr enable jdxcode/mise
-dnf install curl gcc gcc-c++ make m4 git graphviz gpg gperftools-devel zlib-devel mise
+dnf install curl gcc gcc-c++ glibc-devel libstdc++-devel make m4 git graphviz gpg gperftools-devel zlib-devel mise
 ```
 
 On [Arch Linux](https://archlinux.org/) (run as superuser):
