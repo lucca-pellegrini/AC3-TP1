@@ -628,26 +628,33 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
             const scons_path = std.fmt.allocPrint(allocator, "{s}/scons", .{venv_bin}) catch return error.OutOfMemory;
             defer allocator.free(scons_path);
 
-            var child = std.process.Child.init(&[_][]const u8{
-                "env",
-                path_env,
-                ldlib_env,
-                ldflags_env,
-                pyconfig_env,
-                scons_path,
-                "-C",
-                "gem5/util/m5",
-                "build/x86/out/m5",
-            }, allocator);
-            child.stdout_behavior = .Inherit;
-            child.stderr_behavior = .Inherit;
-            const term = child.spawnAndWait() catch |build_err| {
+            const build_result = std.process.Child.run(.{
+                .allocator = allocator,
+                .argv = &[_][]const u8{
+                    "env",
+                    path_env,
+                    ldlib_env,
+                    ldflags_env,
+                    pyconfig_env,
+                    scons_path,
+                    "-C",
+                    "gem5/util/m5",
+                    "build/x86/out/m5",
+                },
+            }) catch |build_err| {
                 std.debug.print("Failed to build m5 library: {}\n", .{build_err});
                 return build_err;
             };
+            defer allocator.free(build_result.stdout);
+            defer allocator.free(build_result.stderr);
 
-            if (term.Exited != 0) {
-                std.debug.print("\x1b[1;31mFailed to build m5 library (exit code {})\x1b[0m\n", .{term.Exited});
+            if (build_result.term.Exited != 0) {
+                std.debug.print("\x1b[1;31mFailed to build m5 library (exit code {})\x1b[0m\n", .{build_result.term.Exited});
+                if (build_result.stderr.len != 0) {
+                    std.debug.print("{s}\n", .{build_result.stderr});
+                } else if (build_result.stdout.len != 0) {
+                    std.debug.print("{s}\n", .{build_result.stdout});
+                }
                 return error.M5BuildFailed;
             }
         } else {
