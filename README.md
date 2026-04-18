@@ -162,10 +162,10 @@ pacman -S --needed curl gcc make m4 git graphviz gpg gperftools zlib mise
 git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.1 --depth=1 --recursive --shallow-submodules
 cd AC3-TP1
 mise trust
-mise run setup-tex # If using TinyTeX from mise: install required TeX packages
-mise run build # Build simulator and workloads
-mise run simulate # Run simulations and collect results
-mise run report # Build LaTeX report
+mise setup-tex # If using TinyTeX from mise: install required TeX packages
+mise build # Build simulator and workloads
+mise simulate # Run simulations and collect results
+mise report # Build LaTeX report
 ```
 
 ## Incremental Workflow
