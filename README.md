@@ -137,7 +137,7 @@ On [Fedora 43](https://fedoraproject.org/)/[RHEL 10](https://www.redhat.com/en/t
 ```bash
 dnf install 'dnf-command(copr)'
 dnf copr enable jdxcode/mise
-dnf install gcc gcc-c++ glibc-devel libstdc++-devel m4 git zlib-devel graphviz mise
+dnf install gcc gcc-c++ glibc-devel glibc-static libstdc++ libstdc++-devel libstdc++-static m4 git zlib-devel graphviz mise
 ```
 
 On [Arch Linux](https://archlinux.org/) (run as superuser):
