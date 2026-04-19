@@ -26,5 +26,5 @@ run = '''
         tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile ||
         echo All TeX dependencies met
     '''
-tools = { tinytex = "2026.04" }
+tools = { tinytex = "2026.04", perl = "5.42.2" }
 hide = true

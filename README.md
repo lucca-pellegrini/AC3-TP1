@@ -128,7 +128,7 @@ and PDF report appear under `figures/` and `report/`.
 On [Debian Trixie](https://www.debian.org/releases/trixie/):
 
 ```bash
-sudo apt install curl gcc g++ m4 git graphviz libgoogle-perftools-dev zlib1g-dev
+sudo apt install curl gcc g++ m4 git zlib1g-dev libgoogle-perftools-dev graphviz
 curl https://mise.run | sh && export PATH="$HOME/.local/bin:$PATH"
 ```
 
@@ -137,13 +137,13 @@ On [Fedora 43](https://fedoraproject.org/)/[RHEL 10](https://www.redhat.com/en/t
 ```bash
 dnf install 'dnf-command(copr)'
 dnf copr enable jdxcode/mise
-dnf install curl gcc gcc-c++ glibc-devel libstdc++-devel m4 git graphviz zlib-devel mise
+dnf install gcc gcc-c++ glibc-devel libstdc++-devel m4 git zlib-devel graphviz mise
 ```
 
 On [Arch Linux](https://archlinux.org/) (run as superuser):
 
 ```bash
-pacman -S --needed curl gcc m4 git graphviz gperftools zlib mise
+pacman -S --needed gcc m4 git graphviz gperftools zlib mise
 ```
 
 ### Clone repo, trust config, and run
