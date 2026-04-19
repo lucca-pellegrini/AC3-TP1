@@ -136,32 +136,6 @@ def print_simulation_header(
     synchronized_print("\n".join(output))
 
 
-def check_simulation_completed(output_dir: Path) -> bool:
-    """Check if a simulation has completed successfully."""
-    completed_file = output_dir / ".completed"
-    stats_file = output_dir / "stats.txt"
-
-    # If .completed marker exists, trust it
-    if completed_file.exists():
-        return True
-
-    # Otherwise, check if stats.txt exists and has content
-    if stats_file.exists():
-        try:
-            with open(stats_file, "r") as f:
-                content = f.read()
-                # Check for key indicators that simulation completed
-                if "simTicks" in content and "system.cpu.numCycles" in content:
-                    # Mark as completed for future runs
-                    completed_file.touch()
-                    return True
-        except Exception:
-            # If parsing fails, assume incomplete
-            return False
-
-    return False
-
-
 def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
     """
     Worker function to run a single simulation.
@@ -182,7 +156,7 @@ def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
     worker_id = sim_data.get("worker_id", 0)
 
     # Check if already completed
-    if check_simulation_completed(output_dir):
+    if (output_dir / ".completed").exists():
         # Print completion header for skipped simulation
         parallel_info = f"Worker {worker_id} - SKIPPED (already done)"
         print_simulation_header(
@@ -242,11 +216,11 @@ def run_single_simulation(sim_data: Dict[str, Any]) -> Tuple[bool, str, float]:
             if elapsed_time < 60:
                 time_str = f"{elapsed_time:.1f}s"
             elif elapsed_time < 3600:
-                time_str = f"{elapsed_time/60:.1f}min"
+                time_str = f"{elapsed_time / 60:.1f}min"
             elif elapsed_time < 86400:
-                time_str = f"{elapsed_time/3600:.1f}h"
+                time_str = f"{elapsed_time / 3600:.1f}h"
             else:
-                time_str = f"{elapsed_time/86400:.1f}days"
+                time_str = f"{elapsed_time / 86400:.1f}days"
 
             parallel_info = f"Worker {worker_id} - COMPLETED in {time_str}"
             print_simulation_header(

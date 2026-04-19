@@ -3,9 +3,17 @@
 # SPDX-FileCopyrightText: Copyright © 2026 Ariel Inácio Jordão <arielijordao@gmail.com>
 
 import argparse
+import sys
 
 import m5
 from m5.objects import *
+
+# gem5's stdlib provides a higher-level enum of exit events. We use it to
+# decide if a run should be considered "successfully completed".
+try:
+    from gem5.simulate.exit_event import ExitEvent
+except Exception:  # pragma: no cover
+    ExitEvent = None  # type: ignore
 
 # Define realistic cache configurations based on real architectures
 # Each configuration is (L1I_size, L1D_size, L2_size, L3_size)
@@ -212,4 +220,16 @@ print("")
 
 exit_event = m5.simulate()
 print(f"\nSimulation complete at tick {m5.curTick()}")
-print(f"Exit reason: {exit_event.getCause()}")
+
+exit_reason = exit_event.getCause()
+translated = None
+if ExitEvent is not None:
+    try:
+        translated = ExitEvent.translate_exit_status(exit_reason)
+    except Exception:
+        translated = None
+
+print(f"Exit reason: {exit_reason}")
+print(f"Exit event: {translated.name if translated is not None else 'UNKNOWN'}")
+
+sys.exit(0 if (ExitEvent is not None and translated == ExitEvent.EXIT) else 1)
