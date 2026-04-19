@@ -5,7 +5,7 @@ NAME := "A_Quantitative_Cache_Evaluation_of_Select_PolyBench_Kernels_-_Andrade_C
 
 MAIN := "main"
 VER := `git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'`
-LATEX := `realpath ../gem5/venv/bin/python` + " latexrun --latex-cmd pdflatex"
+LATEX := `realpath ../.venv/bin/python` + " latexrun --latex-cmd pdflatex"
 LATEXFLAGS := "-O build -Wall"
 CLEANFLAGS := "--clean-all -O build"
 RELEASE := NAME + "_" + VER
