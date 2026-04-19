@@ -42,7 +42,7 @@ const DepInfo = struct {
 
 // List of all needed commands, and why they're needed
 const all_dependencies = [_]DepInfo{
-    .{ .cmd = "git", .description = "Version control (for gem5 submodule)", .required_for = &.{"init-gem5"} },
+    .{ .cmd = "git", .description = "Version control, for gem5", .required_for = &.{"init-gem5"} },
     .{ .cmd = "uv", .description = "Python environment manager", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "cc", .description = "C compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
     .{ .cmd = "c++", .description = "C++ compiler", .required_for = &.{ "gem5", "m5", "workloads", "simulations", "visualize", "default" } },
