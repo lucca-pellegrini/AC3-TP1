@@ -84,7 +84,7 @@ Dataset choices compiled into the real-run workloads:
 Required (checked by `zig build check-deps`):
 
 - [Zig 0.15.2](https://ziglang.org) ([ZVM](https://zvm.app)/[mise](https://mise.jdx.dev/) recommended)
-- [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside gem5/venv)
+- [uv](https://docs.astral.sh/uv/) (the build pins Python to 3.14.3 inside venv)
 - A system-wide [GCC](https://gcc.gnu.org/) or [Clang](https://clang.llvm.org/) installation, since gem5 unfortunately will
   not accept Zig's internal Clang
 - [git](https://git-scm.com/), [just](https://just.systems/), and [m4](https://www.gnu.org/software/m4/m4.html) to fetch and build gem5, as well as the report
@@ -217,12 +217,12 @@ Or invoke the orchestrator for just one workload:
 
 ```bash
 # Run all 31 configs for gemm with 4 workers and CPU pinning (requires psutil)
-./gem5/venv/bin/python run_all_simulations.py \
+./.venv/bin/python run_all_simulations.py \
   --results-dir=results ./gem5/build/X86/gem5.fast ./zig-out/bin/gemm \
   -j 4 --pin-workers
 
 # Dry-run to see what would execute (no simulations are launched)
-./gem5/venv/bin/python run_all_simulations.py \
+./.venv/bin/python run_all_simulations.py \
   --dry-run --results-dir=results ./gem5/build/X86/gem5.fast ./zig-out/bin/jacobi-2d
 ```
 
@@ -240,10 +240,10 @@ cleanly without redoing work. The plotting stage reads all runs from
 ## Reproducibility Choices
 
 To minimize drift, the build pins Python 3.14.3 via uv and installs all Python
-tooling (SCons, plotting libraries, and friends) into `gem5/venv`. The gem5
-source is vendored as a Git submodule at a fixed commit and is always built
-through that virtual environment’s SCons. Workloads target `x86_64-linux-musl`
-and are linked statically to reduce host‑dependency variance (see
+tooling (SCons, plotting libraries, and friends) into `.venv`. The gem5 source
+is vendored as a Git submodule at a fixed commit and is always built through
+that virtual environment’s SCons. Workloads target `x86_64-linux-musl` and are
+linked statically to reduce host‑dependency variance (see
 [musl](https://musl.libc.org)). The simulation runner is deterministic and
 resumable; it caps parallelism at `min(9, nproc)` to avoid oversubscription and
 out‑of‑memory failures.

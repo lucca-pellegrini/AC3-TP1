@@ -336,13 +336,13 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     }
 
     // Create venv if missing
-    const venv_path = "gem5/venv";
+    const venv_path = ".venv";
     if (std.fs.cwd().statFile(venv_path)) |_| {} else |err| {
         if (err != error.FileNotFound) return err;
 
         std.debug.print("\x1b[1mCreating Python virtual environment...\x1b[0m\n", .{});
         var child = std.process.Child.init(&[_][]const u8{
-            "uv", "venv", "--quiet", "--python", "3.14.3", "gem5/venv",
+            "uv", "venv", "--quiet", "--python", "3.14.3", venv_path,
         }, allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
@@ -360,7 +360,7 @@ fn setupPythonEnvironment(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     {
         std.debug.print("\x1b[1mInstalling Python dependencies...\x1b[0m\n", .{});
         var child = std.process.Child.init(&[_][]const u8{
-            "uv", "pip", "--no-progress", "install", "--python", "gem5/venv", "-r", "requirements.txt",
+            "uv", "pip", "--no-progress", "install", "--python", venv_path, "-r", "requirements.txt",
         }, allocator);
         child.stdout_behavior = .Inherit;
         child.stderr_behavior = .Inherit;
@@ -408,7 +408,7 @@ fn initGem5Submodule(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyer
 }
 
 fn pythonInfoFromVenv(allocator: std.mem.Allocator) !PythonInfo {
-    const py = "./gem5/venv/bin/python";
+    const py = "./.venv/bin/python";
 
     // Get sys.base_prefix
     const base_prefix = blk: {
@@ -526,7 +526,7 @@ fn buildGem5Simulator(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anye
             // SCons changes directory with -C.
             const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
             defer allocator.free(cwd);
-            const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
+            const venv_bin = std.fmt.allocPrint(allocator, "{s}/.venv/bin", .{cwd}) catch return error.OutOfMemory;
             defer allocator.free(venv_bin);
 
             const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
@@ -614,7 +614,7 @@ fn buildM5Library(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
             // SCons changes directory with -C.
             const cwd = std.fs.cwd().realpathAlloc(allocator, ".") catch return error.OutOfMemory;
             defer allocator.free(cwd);
-            const venv_bin = std.fmt.allocPrint(allocator, "{s}/gem5/venv/bin", .{cwd}) catch return error.OutOfMemory;
+            const venv_bin = std.fmt.allocPrint(allocator, "{s}/.venv/bin", .{cwd}) catch return error.OutOfMemory;
             defer allocator.free(venv_bin);
 
             const old_path = std.process.getEnvVarOwned(allocator, "PATH") catch "";
@@ -709,7 +709,7 @@ fn runSimulations(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror
         const sim_result = std.process.Child.run(.{
             .allocator = allocator,
             .argv = &[_][]const u8{
-                "./gem5/venv/bin/python",
+                "./.venv/bin/python",
                 "./run_all_simulations.py",
                 "--results-dir=results",
                 "gem5/build/X86/gem5.fast",
@@ -741,7 +741,7 @@ fn generateVisualizations(step: *std.Build.Step, _: std.Build.Step.MakeOptions) 
     const viz_result = std.process.Child.run(.{
         .allocator = allocator,
         .argv = &[_][]const u8{
-            "./gem5/venv/bin/python",
+            "./.venv/bin/python",
             "./visualize_results.py",
         },
     }) catch |viz_err| {
