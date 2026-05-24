@@ -25,7 +25,7 @@ automation (uv/Python setup and LaTeX/report build) are written for Linux.
 
 ## Full Demonstration
 
-[![asciicast](https://asciinema.org/a/Iqcv0OSyuDhDmM5C.svg)](https://asciinema.org/a/Iqcv0OSyuDhDmM5C?t=75)
+[![asciicast](https://asciinema.org/a/Z8cBqfjylaG3CYfH.svg)](https://asciinema.org/a/Z8cBqfjylaG3CYfH?t=103)
 
 ## What’s Here
 
