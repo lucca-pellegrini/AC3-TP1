@@ -57,29 +57,23 @@
 
 \begin{abstract}
 
-	We present a systematic and reproducible evaluation of cache hierarchy
-	sensitivities across five PolyBench kernels using the gem5 simulator. Our
-	study separates realistic multi-level capacity presets from two orthogonal
-	parameters, line size and associativity, to isolate spatial and conflict
-	effects, sweeping one factor at a time from a common baseline. For each
-	workload we collect per-level miss rates and \textsc{mpki}, total miss
-	latency, and \textsc{ipc}/\textsc{cpi}. Three findings emerge. First, cache
-	line size is the dominant factor: it reduces misses almost identically
-	across kernels, yet the resulting speedups differ widely, because what a
-	kernel gains depends on how much of its execution was stalled on memory to
-	begin with. Second, associativity is structurally low-leverage for these
-	regular access patterns, mattering only in the degenerate direct-mapped
-	case. Third, capacity is a threshold effect, helping only where the hot
-	working set exceeds the last-level cache. We show that a single measurable
-	quantity, the fraction of execution exposed to L1D miss latency, orders the
-	kernels by their response to both line size and capacity, and predicts the
-	line-size speedups through a simple analytical model, turning per-kernel
-	observations into one transferable criterion for cache tuning. To strengthen
-	reproducibility, the full pipeline is encoded in a single build graph with
-	pinned versions and statically linked workloads. The resulting methodology
-	and artifacts facilitate transparent and repeatable cache design-space
-	exploration, and provide a baseline for future studies that consider larger
-	datasets, alternative cache policies, or out-of-order cores.
+	Cache hierarchy parameters interact, so their individual payoffs are hard to
+	rank from studies that vary several at once. We evaluate five PolyBench
+	kernels under gem5, sweeping capacity, line size, and associativity one
+	factor at a time from a common baseline, so that every observed change is
+	attributable to a single parameter. Line size dominates: it cuts L1D misses
+	almost identically across kernels, yet buys speedups ranging from 0.5\% to
+	15.4\%, because what a kernel gains depends on how much of
+	its execution was stalled on memory to begin with. Associativity proves
+	structurally low-leverage for these regular access patterns and matters only
+	in the degenerate direct-mapped case; capacity is a threshold effect
+	that helps only where the hot working set exceeds the last-level cache. One
+	measurable quantity, the fraction of execution exposed to L1D miss latency,
+	orders the kernels by their response to both line size and capacity and
+	predicts the line-size speedups through an Amdahl-style model, which thus
+	supplies a transferable criterion for cache tuning. The whole pipeline is
+	encoded as a single version-pinned build graph, so the methodology itself is
+	reproducible.
 
 \end{abstract}
 
