@@ -167,43 +167,37 @@ cache parameters for regular numerical workloads: most performance gains
 exploit spatial locality, not conflict avoidance or raw capacity.
 
 Beyond the measurements themselves, this work contributes:
-
-\begin{itemize}
-
-	\item \textbf{An explicit experimental design for cache attribution}, not
-	merely a set of gem5 runs. We isolate a categorical capacity factor from two
-	numeric factors and hold the core model, \textsc{roi}, dataset, and
-	toolchain fixed across the grid, making every delta attributable to a single
-	parameter and comparable across kernels and levels.
-
-	\item \textbf{A predictive criterion, not just a ranking.} We reduce the
+\begin{enumerate*}[label=(\roman*), itemjoin={{; }}, itemjoin*={{; and }}]
+	\item an explicit experimental design for cache attribution, isolating a
+	categorical capacity factor from two numeric factors and holding the core
+	model, \textsc{roi}, dataset, and toolchain fixed across the grid, so that
+	every delta is attributable to a single parameter and comparable across
+	kernels and levels
+	\item a predictive criterion rather than just a ranking, reducing the
 	observed sensitivities to two necessary conditions on a kernel
 	(access-pattern spatiality and working-set size relative to the hierarchy),
-	show both are captured by one measurable quantity, and validate that
-	quantity as an Amdahl-style predictor. A designer can thus estimate a new
-	kernel's cache sensitivity from a single baseline run instead of a sweep.
-
-	\item \textbf{A mechanically reproducible artifact in which the methodology
-	\textit{is} the deliverable.} The full workflow---dependency checks, a pinned
+	showing both are captured by one measurable quantity, and validating that
+	quantity as an Amdahl-style predictor, so that a designer can estimate a new
+	kernel's cache sensitivity from a single baseline run instead of a sweep
+	\item a mechanically reproducible artifact in which the methodology
+	\textit{is} the deliverable, the full workflow---dependency checks, a pinned
 	Python interpreter and frozen packages, gem5 built at a recorded commit,
 	static musl-linked workloads, the sweep, figure generation, and this
-	manuscript---is a single idempotent build graph~\cite{repo:2026}. The runner
-	is resumable and core-pinnable, and re-derives every figure and number here
-	from raw \texttt{stats.txt} output with no manual step.
-
-	\item \textbf{An extensible design-space harness}, in which kernels,
-	presets, and swept parameters are declarative inputs rather than hard-coded
-	cases, so adding a workload or a new dimension (replacement policy,
-	prefetcher, out-of-order core) reuses the same collection and analysis path.
-
-	\item \textbf{Documented null and negative results}, which are usually
-	discarded: associativity is inert above direct-mapped, most capacity presets
-	are indistinguishable from baseline, and L1I traffic is effectively free (at
-	most 78 misses across all 155 runs). We explain each mechanically. These
-	non-effects delimit where tuning effort is wasted, and the last exposes a
-	measurement pitfall in \textsc{roi}-scoped instruction-cache statistics.
-
-\end{itemize}
+	manuscript---being a single idempotent build graph~\cite{repo:2026} whose
+	runner is resumable and core-pinnable, and re-derives every figure and number
+	here from raw \texttt{stats.txt} output with no manual step
+	\item an extensible design-space harness, in which kernels, presets, and
+	swept parameters are declarative inputs rather than hard-coded cases, so
+	adding a workload or a new dimension (replacement policy, prefetcher,
+	out-of-order core) reuses the same collection and analysis path
+	\item documented null and negative results, which are usually discarded:
+	associativity is inert above direct-mapped, most capacity presets are
+	indistinguishable from baseline, and L1I traffic is effectively free (at most
+	78 misses across all 155 runs)
+\end{enumerate*}.
+We explain each non-effect mechanically; together they delimit where tuning
+effort is wasted, and the last exposes a measurement pitfall in
+\textsc{roi}-scoped instruction-cache statistics.
 
 \section{Related Work}\label{sec:related}
 
