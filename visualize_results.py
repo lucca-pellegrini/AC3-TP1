@@ -26,6 +26,7 @@ Parameters varied:
 import re
 import os
 import shutil
+import subprocess
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -111,33 +112,70 @@ def _candidate_tex_bin_dirs() -> List[Path]:
     return uniq
 
 
+def _missing_tex_style_files(names: Sequence[str]) -> List[str]:
+    """Return the subset of `names` that `kpsewhich` cannot resolve.
+
+    If `kpsewhich` is unavailable we return nothing rather than guessing, so a
+    working non-TeX-Live setup is never blocked by this check.
+    """
+    if shutil.which("kpsewhich") is None:
+        return []
+
+    missing: List[str] = []
+    for name in names:
+        try:
+            found = subprocess.run(
+                ["kpsewhich", name],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+        except OSError:
+            return []
+        if found.returncode != 0 or not found.stdout.strip():
+            missing.append(name)
+    return missing
+
+
 def ensure_usetex_dependencies() -> None:
     """Ensure Matplotlib's `text.usetex` dependencies are available.
 
     The SciencePlots `ieee` style enables `text.usetex=True`. For Matplotlib,
-    this requires (at minimum) `latex` and `dvipng` on PATH.
+    this requires `latex` and `dvipng` on PATH *and* the style files that its
+    usetex preamble loads. Checking only the binaries is not enough: a TeX
+    installation missing `type1ec.sty` fails much later, inside a
+    `tight_layout()` text-measurement call, as an opaque
+    "latex was not able to process the following string: b'lp'".
 
     If TeX isn't currently on PATH, we try to locate TinyTeX (including mise
     installs) and prepend it.
     """
     required = ("latex", "dvipng")
-    if all(shutil.which(cmd) for cmd in required):
+    required_styles = ("type1ec.sty", "type1cm.sty")
+
+    def _fully_available() -> bool:
+        return all(shutil.which(cmd) for cmd in required) and not (
+            _missing_tex_style_files(required_styles)
+        )
+
+    if _fully_available():
         return
 
     for texbin in _candidate_tex_bin_dirs():
         _prepend_path(texbin)
-        if all(shutil.which(cmd) for cmd in required):
+        if _fully_available():
             return
 
     missing = [cmd for cmd in required if shutil.which(cmd) is None]
+    missing += _missing_tex_style_files(required_styles)
     if missing:
         raise RuntimeError(
             "Matplotlib is configured for LaTeX text rendering (text.usetex=True), "
-            f"but required tool(s) are not on PATH: {', '.join(missing)}. "
+            f"but the following dependencies are unavailable: {', '.join(missing)}. "
             "\n\nFix options:\n"
-            "  - System TeX Live: install a full TeX Live, or at least packages providing 'latex' and 'dvipng'.\n"
-            "  - TinyTeX (mise): `mise install` then `mise run setup-tex` (installs dvipng + common LaTeX/font packages).\n"
-            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH and run `tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile`.\n"
+            "  - System TeX Live: install a full TeX Live, or at least packages providing 'latex', 'dvipng', and the cm-super/type1cm style files.\n"
+            "  - TinyTeX (mise): `mise run setup-tex` (installs dvipng + the required LaTeX/font packages).\n"
+            "  - TinyTeX (manual): ensure ~/.TinyTeX/bin/<arch> is on PATH, then run `tlmgr update --self && tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile`.\n"
         )
 
 

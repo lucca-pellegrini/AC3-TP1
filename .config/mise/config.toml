@@ -19,12 +19,45 @@ tools = { tinytex = "2026.04", just = "1.49.0" }
 [tasks.setup-tex]
 description = "Set up required TeX packages for the plots and report"
 run = '''
-    for file in IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty
-    do
-        kpsewhich "$file" >/dev/null 2>&1 || echo File "$file" is missing
-    done | grep missing &&
-        tlmgr install dvipng type1cm cm-super underscore ieeetran embedfile ||
-        echo All TeX dependencies met
+    set -eu
+
+    packages="dvipng type1cm cm-super underscore ieeetran embedfile"
+    files="IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty"
+
+    # Report every unmet dependency, both style files and binaries.
+    survey_missing() {
+        missing=""
+        for file in $files
+        do
+            kpsewhich "$file" >/dev/null 2>&1 || missing="$missing $file"
+        done
+        command -v dvipng >/dev/null 2>&1 || missing="$missing dvipng"
+    }
+
+    survey_missing
+    if [ -z "$missing" ]
+    then
+        echo "All TeX dependencies met"
+        exit 0
+    fi
+    echo "Missing TeX dependencies:$missing"
+
+    # A tlmgr older than its remote repository refuses to install anything, so
+    # self-update first. This must be fatal: skipping it makes every subsequent
+    # install fail, which is how missing style files previously reached
+    # Matplotlib as an opaque "latex was not able to process 'lp'" error.
+    tlmgr update --self
+    tlmgr install $packages
+
+    # Re-survey rather than trusting the installer's exit status.
+    survey_missing
+    if [ -n "$missing" ]
+    then
+        echo "ERROR: TeX dependencies still missing after install:$missing" >&2
+        exit 1
+    fi
+
+    echo "All TeX dependencies met"
     '''
 tools = { tinytex = "2026.04", perl = "5.42.2" }
 hide = true
