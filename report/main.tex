@@ -109,10 +109,10 @@ Architectural proposals typically fix the hierarchy and vary a single
 dimension---for example, Khoshavi and DeMara~\cite{khoshavi:2018} substitute
 the memory technology of the last-level cache---so the reported gains are
 inseparable from the specific baseline configuration. Design-space exploration
-studies such as Shahid et~al.\@\cite{shahid:2025} sweep many parameters, but
+studies such as Shahid et~al.~\cite{shahid:2025} sweep many parameters, but
 target a single core and report aggregate performance rather than the per-level
 miss behavior that explains \textit{why} a parameter matters. Methodological
-work is even more pointed: Bueno et~al.\@\cite{bueno:2024} show that
+work is even more pointed: Bueno et~al.~\cite{bueno:2024} show that
 conclusions about cache replacement can shift by more than 30\% depending
 solely on how simulation intervals are weighted, which implies that any cache
 result is only as trustworthy as the procedure that produced it. Yet such
@@ -203,7 +203,7 @@ but---as is typical of technology-substitution studies---it is measured against
 one fixed hierarchy, so it cannot be compared against what conventional
 parameter tuning would have achieved on the same workloads.
 
-From a methodological standpoint, Bueno et~al.\@\cite{bueno:2024} propose a
+From a methodological standpoint, Bueno et~al.~\cite{bueno:2024} propose a
 weight redefinition methodology for simulation intervals based on memory
 activity (\textsc{mpki}), reducing discrepancies in replacement-policy analysis
 by more than 30\%. We read this as the strongest available argument that cache
@@ -214,7 +214,7 @@ Validation in this domain relies on established infrastructure: gem5
 \cite{gem5-20:2007} for detailed modeling and PolyBench~\cite{polybench:2016}
 for representative kernels with well-characterized locality. gem5's flexibility
 has driven work on Design Space Exploration (\textsc{dse}), of which Shahid
-et~al.\@\cite{shahid:2025} is representative, using parametric simulation to
+et~al.~\cite{shahid:2025} is representative, using parametric simulation to
 balance hardware cost and performance in the \textsc{risc-v} \textsc{cva6} core.
 Such studies establish gem5's suitability for \textsc{dse}; our work differs in
 sweeping factors orthogonally to attribute effects per parameter, and in
@@ -420,7 +420,7 @@ spatial locality and limited temporal reuse.
 
 \subsubsection{Floyd-Warshall (All-Pairs Shortest Paths)} The Floyd-Warshall
 algorithm computes shortest paths between all pairs of vertices in a weighted
-graph using dynamic programming.\cite{floyd:1962}\cite{warshall:1962}
+graph using dynamic programming~\cite{floyd:1962, warshall:1962}.
 
 \[
 D_{ij}^{(k)} = \min\left(D_{ij}^{(k-1)},\; D_{ik}^{(k-1)} + D_{kj}^{(k-1)}\right)
@@ -436,7 +436,7 @@ temporal reuse across iterations of the outer loop.
 
 \subsubsection{Jacobi-2D (Iterative Stencil Method)} The Jacobi-2D kernel
 applies an iterative stencil computation over a 2D grid, commonly used in
-numerical solutions of partial differential equations.\cite{golub:2013}
+numerical solutions of partial differential equations~\cite{golub:2013}.
 
 \[
 A_{i,j}^{(t+1)} =
@@ -473,7 +473,7 @@ From PolyBench~\cite{polybench:2016}:
 
 Compared to Jacobi-2D, the in-place update introduces loop-carried
 dependencies, increasing temporal locality but reducing
-parallelism.\cite{golub:2013}
+parallelism~\cite{golub:2013}.
 
 \subsection{Collection of Metrics}
 
