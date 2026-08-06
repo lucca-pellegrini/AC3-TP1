@@ -4,7 +4,7 @@
 NAME       = A_Quantitative_Cache_Evaluation_of_Select_PolyBench_Kernels_-_Andrade_Canizela_Dimas_Jordão_Pellegrini
 MAIN       = main
 TEXT       = *.tex
-ETC        = Makefile references.bib
+ETC        = Makefile references.bib sbc-template.sty sbc.bst
 FIG        = ../figures/*.pdf
 VER        = $(shell git describe --long --tags \
               | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')
