@@ -239,11 +239,12 @@ costs more simulations (155 rather than a handful) but is the only route to
 per-parameter attribution, and is what lets the associativity result be reported
 as a property of the workload class rather than of one preset.
 
-\subsubsection{In-order core (\textit{TimingSimpleCPU})}
+\subsubsection{In-order core}
 We deliberately choose the simplest core model that still charges realistic
-memory timing. An out-of-order core overlaps miss latency with independent
-work, so an identical reduction in misses produces a smaller and
-\textit{configuration-dependent} change in \textsc{ipc}. That is a legitimate
+memory timing, gem5's \textit{TimingSimpleCPU}. An out-of-order core overlaps
+miss latency with independent work, so an identical reduction in misses produces
+a smaller and \textit{con\-fig\-u\-ra\-tion-dependent} change in \textsc{ipc}.
+That is a legitimate
 object of study, but it entangles the cache effect we want to measure with the
 core's ability to hide it. With an in-order model, a miss that is not serviced
 stalls the pipeline, so \textsc{cpi} responds to cache behavior almost
@@ -556,13 +557,13 @@ available~\cite{repo:2026}.
 \subsection{Overview and Ranking of the Three Factors}
 
 Table~\ref{tab:sensitivity} summarizes the entire sweep in the form that matters
-for design decisions: how much \textsc{ipc} each factor buys, per kernel. Three
-observations organize this section. First, the factors are separated by more than
-an order of magnitude in leverage: line size moves \textsc{ipc} by up to
-\(15.4\%\), capacity by up to \(7.2\%\), associativity (above direct-mapped) by
-at most \(0.2\%\). Second, the kernel ordering is the same for line size
-and capacity, suggesting one underlying quantity governs both. Third, the
-mechanism is uniform where the outcome is not: L1D \textsc{mpki} falls almost
+for design decisions: how much \textsc{ipc} each factor buys, per kernel. The
+three factors are separated by more than an order of magnitude in leverage. Line
+size moves \textsc{ipc} by up to \(15.4\%\), capacity by up to \(7.2\%\), and
+associativity above direct-mapped by at most \(0.2\%\). Two features of the
+table then guide the rest of this section. The kernel ordering is the same for
+line size and capacity, which suggests one underlying quantity governs both. And
+the mechanism is uniform where the outcome is not: L1D \textsc{mpki} falls almost
 exactly \(8.0\times\) for four of five kernels, yet \textsc{ipc} gains span
 \(0.5\%\) to \(15.4\%\). The cache behaves identically; what differs is how much
 of each kernel's execution was exposed to it.
