@@ -707,18 +707,21 @@ misses are consequently dominated by compulsory and capacity effects, against
 which extra ways are powerless. A parameter that targets a miss category the
 workload barely generates cannot help, however generously it is provisioned.
 
-The data bear this out with almost no residual: \textsc{ipc} varies by at most
-\(0.18\%\) (\textsc{ata}x), and by \(0.00\%\) for Jacobi-2D and Seidel-2D, across
-the entire 2-to-16-way range (Fig.~\ref{fig:comp-ipc-l1}). The sole exception is
-the direct-mapped case, exceptional because with one way every alias
-necessarily evicts, there being no alternative frame for the incoming line. A
-direct-mapped L1D thus carries a higher miss rate than an 8-way one: \(+96\%\) in
-Floyd-Warshall, \(+31\%\) in \textsc{gemm}, \(+19\%\) in Jacobi-2D, \(+11\%\) in
-Seidel-2D, \(+3\%\) in \textsc{ata}x. Even these are largely invisible in
-\textsc{ipc}---eliminating Floyd-Warshall's \(96\%\) penalty is worth
-\(+0.29\%\)---the same lesson Seidel-2D taught for line size. A single additional
-way captures essentially all the conflict pressure these kernels produce; further
-associativity is wasted area.
+The data bear this out with almost no residual: at L1, \textsc{ipc} varies by at
+most \(0.18\%\) (\textsc{ata}x), and by \(0.00\%\) for Jacobi-2D and Seidel-2D,
+across the entire 2-to-16-way range (Fig.~\ref{fig:comp-ipc-l1}). Deeper levels
+are flatter still: over the same range the L2 sweep moves \textsc{ipc} by
+\(0.00\%\) in all five kernels, and the L3 sweep by at most \(0.0007\%\), which
+is the expected result once L1 has already absorbed the conflict pressure. The
+sole exception is the direct-mapped case, exceptional because with one way every
+alias necessarily evicts, there being no alternative frame for the incoming
+line. A direct-mapped L1D thus carries a higher miss rate than an 8-way one:
+\(+96\%\) in Floyd-Warshall, \(+31\%\) in \textsc{gemm}, \(+19\%\) in Jacobi-2D,
+\(+11\%\) in Seidel-2D, \(+3\%\) in \textsc{ata}x. Even these are largely
+invisible in \textsc{ipc}---eliminating Floyd-Warshall's \(96\%\) penalty is
+worth \(+0.29\%\)---the same lesson Seidel-2D taught for line size. A single
+additional way captures essentially all the conflict pressure these kernels
+produce; further associativity is wasted area.
 
 \begin{figure}[b]
     \centering
@@ -855,9 +858,7 @@ leaves four of five kernels below the \textsc{llc} threshold, making our capacit
 effects lower bounds and Floyd-Warshall's flatness an artifact of
 \texttt{SMALL\_DATASET} rather than of the algorithm. The workloads are regular
 by construction, so the criterion's applicability to irregular or
-indirection-intensive applications remains open. Finally, our associativity
-conclusions rest on the L1 sweep; the L2 and L3 sweeps for Floyd-Warshall did
-not complete within the \textsc{roi} and are excluded.
+indirection-intensive applications remains open.
 
 Reproducibility is part of the knowledge this work contributes: the entire
 pipeline is a deterministic, idempotent build graph with pinned versions, so
