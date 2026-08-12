@@ -282,12 +282,15 @@ kernel, excluding initialization and output.
 
 From each run's \texttt{stats.txt} we record throughput
 (\textsc{ipc}/\textsc{cpi}), per-level hits, misses and miss rates, per-level
-\textsc{mpki} (misses per kilo instructions), total miss latency summed across
-levels as a proxy for memory stalls, and \(f_{\text{stall}}\), the fraction of
-baseline execution cycles exposed to L1D miss latency. Categorical presets are
+\textsc{mpki} (misses per kilo instructions), and total miss latency summed across
+levels as a proxy for memory stalls. Categorical presets are
 reported as deltas or speedup against a per-workload baseline
 (\(\mathrm{\textsc{ipc}}/\mathrm{\textsc{ipc}}_{\text{baseline}}\)); numeric
 sweeps are plotted as absolute values, with logarithmic scales where needed.
+Besides these conventional architectural metrics, we derive \(f_{\text{stall}}\),
+defined as the fraction of baseline execution cycles exposed to L1D miss latency.
+As discussed in Section~\ref{sec:results}, this quantity becomes the main
+explanatory variable for the observed cache sensitivities.
 
 \subsection{Workload Selection}\label{sub:workloads}
 
