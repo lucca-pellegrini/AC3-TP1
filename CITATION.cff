@@ -45,28 +45,19 @@ authors:
       Universidade Católica de Minas Gerais
 repository-code: 'https://github.com/lucca-pellegrini/AC3-TP1'
 abstract: >-
-  We present a systematic and reproducible evaluation of
-  cache hierarchy sensitivities across five PolyBench
-  kernels using the gem5 simulator. Our study separates
-  realistic multi-level capacity presets from two orthogonal
-  parameters to isolate spatial and conflict effects. For
-  each workload we execute a controlled sweep and collect a
-  standard set of per-level miss rates and MPKI, total miss
-  latency, IPC/CPI. Three findings emerge. First, cache line
-  size is the dominant factor: doubling the line often
-  halves L1D miss rate and improves IPC where memory stalls
-  are non-trivial. Second, associativity has minimal impact
-  for these regular kernels, with the notable exception of
-  direct-mapped caches. Third, capacity presets matter
-  selectively when the hot working set approaches the LLC
-  boundary; otherwise spatial locality dominates. To
-  strengthen reproducibility, we encode the full pipeline in
-  a single build graph with pinned versions for all
-  components, and statically link workloads. The resulting
-  methodology and artifacts facilitate transparent and
-  repeatable cache design-space exploration, and provide a
-  baseline for future studies that consider larger datasets,
-  alternative cache policies, or out-of-order cores.
+  Cache hierarchy parameters interact, so their individual
+  payoffs are hard to rank. We evaluate five PolyBench
+  kernels under gem5, sweeping capacity, line size, and
+  associativity one factor at a time from a common baseline,
+  so every change is attributable to a single parameter.
+  Line size dominates: it cuts L1D misses almost identically
+  across kernels, yet buys speedups from 0.5% to 15.4%.
+  Associativity is structurally low-leverage for regular
+  accesses, and capacity is a threshold effect. One
+  quantity, the fraction of execution exposed to L1D miss
+  latency, orders the kernels for both factors and predicts
+  the line-size speedups via an Amdahl-style model, giving a
+  transferable tuning criterion.
 keywords:
   - Memory hierarchy
   - Cache memories
