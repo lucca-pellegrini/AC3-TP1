@@ -181,14 +181,13 @@ non-volatile memories in the cache hierarchy, proposing \textsc{rrap} (Read
 Reference Activity Persistent), a hybrid architecture replacing conventional
 \textsc{sram} with low- and high-retention \textsc{stt}-\textsc{ram}, and reports
 a 51.7\% reduction in L2 read miss rate alongside area and energy improvements.
-The gain is substantial, but, as is typical of technology-substitution
-studies, it is measured against one fixed hierarchy, so it cannot be compared
-against what conventional parameter tuning would have achieved. Methodologically,
-\cite{bueno:2024} redefines simulation-interval weights from memory activity
-(\textsc{mpki}), reducing discrepancies in replacement-policy analysis by more
-than 30\%: the strongest available argument that cache conclusions are
-procedure-dependent, and our motivation for shipping the procedure as an
-executable artifact.
+The gain is substantial, but, as is typical of technology-substitution studies, it
+is measured against one fixed hierarchy, so it cannot be compared against what
+conventional tuning would achieve. Methodologically, \cite{bueno:2024} redefines
+simulation-interval weights from memory activity (\textsc{mpki}), reducing
+discrepancies in replacement-policy analysis by more than 30\%: the strongest
+available argument that cache conclusions are procedure-dependent, and our
+motivation for shipping the procedure as an executable artifact.
 
 Validation relies on established infrastructure: we use gem5 for detailed
 modeling \cite{gem5-20:2007} and PolyBench for kernels with well-characterized
@@ -344,20 +343,20 @@ minimize drift: Python 3.14.3, packages frozen in \texttt{requirements.txt}, gem
 vendored at commit \texttt{7a2b0e4}; only the C toolchain is loose
 (GCC~\(\geq 14\), with no material effect on comparative trends). A Python
 orchestrator enumerates the grid, manages a worker pool, optionally pins workers to
-physical cores to reduce noise, and writes metrics under deterministic paths, with
-completion markers making the sweep resumable \cite{repo:2026}.
+physical cores, and writes metrics under deterministic paths, with completion
+markers making the sweep resumable \cite{repo:2026}.
 
 \section{Results}\label{sec:results}
 \subsection{Overview and Ranking of the Three Factors}
 
-Table~\ref{tab:sensitivity} summarizes the entire sweep as how much \textsc{ipc}
-each factor buys per kernel. Line size moves \textsc{ipc} by up to \(15.4\%\),
-capacity by up to \(7.2\%\), and associativity above direct-mapped by at most
-\(0.2\%\). Two features guide this section: the kernel ordering is the same for
-line size and capacity, suggesting one underlying quantity governs both; and the
-mechanism is uniform where the outcome is not, since L1D \textsc{mpki} falls almost
-exactly \(8.0\times\) for four of five kernels while \textsc{ipc} gains span
-\(0.5\%\) to \(15.4\%\).
+Table~\ref{tab:sensitivity} summarizes the sweep as how much \textsc{ipc} each
+factor buys per kernel: line size moves it by up to \(15.4\%\), capacity by up to
+\(7.2\%\), and associativity above direct-mapped by at most \(0.2\%\). Two
+features guide this section. The kernel ordering is the same for line size and
+capacity, suggesting one underlying quantity governs both; and the mechanism is
+uniform where the outcome is not, since L1D \textsc{mpki} falls almost exactly
+\(8.0\times\) for four of five kernels while \textsc{ipc} gains span \(0.5\%\) to
+\(15.4\%\).
 
 \begin{table}[!htb]
 	\centering
@@ -399,13 +398,12 @@ misses eliminated (\(\approx0.875\)), predicts every measured speedup to within
 \begin{figure}[!htb]
 	\centering
 	\begin{tabular}{@{}cc@{}}
-		\includegraphics[width=0.40\linewidth]{../figures/comparison_l1d_miss_rate_vs_cache_line.pdf} &
-		\includegraphics[width=0.40\linewidth]{../figures/comparison_ipc_vs_cache_line.pdf} \\
+		\includegraphics[width=0.38\linewidth]{../figures/comparison_l1d_miss_rate_vs_cache_line.pdf} &
+		\includegraphics[width=0.38\linewidth]{../figures/comparison_ipc_vs_cache_line.pdf} \\
 		{\footnotesize (a) L1D miss rate} & {\footnotesize (b) \textsc{ipc}} \\
 	\end{tabular}
-	\caption{Cache line size across kernels: the L1D miss rate (a) falls
-	uniformly, while \textsc{ipc} (b) rises by amounts that differ sharply
-	between kernels.}
+	\caption{Cache line size across kernels: the L1D miss rate (a) falls uniformly,
+	while \textsc{ipc} (b) rises by amounts that differ sharply between kernels.}
 	\label{fig:comparison_line}
 \end{figure}
 
@@ -421,13 +419,12 @@ independent conditions govern its value.
 
 The first is that the access pattern be genuinely spatial rather than already
 served by temporal reuse. \textsc{gemm} fails it despite a perfect \(8.0\times\)
-miss reduction: its inner loop reuses the \(C_{ij}\) accumulator across the entire
-\(k\)-reduction, so the accesses dominating its execution are already L1D hits
-regardless of line width. Only \(3.4\%\) of its baseline cycles are
-stall-exposed, capping the gain at \(+5.8\%\) (\textsc{cpi} \(7.14\) to \(6.75\)). \textsc{ata}x is the opposite: its forward
-phase streams a contiguous \(1900\times2100\) matrix with almost no reuse, so
-nearly every access can be spatially amortized, converting the miss reduction into
-\(+15.4\%\) \textsc{ipc}. Jacobi-2D falls
+miss reduction: its inner loop reuses the \(C_{ij}\) accumulator across the
+\(k\)-reduction, so the dominant accesses are already L1D hits regardless of line
+width, only \(3.4\%\) of its cycles are stall-exposed, and the gain is capped at
+\(+5.8\%\). \textsc{ata}x is the opposite: its forward phase streams a contiguous
+matrix with almost no reuse, so nearly every access can be spatially amortized,
+converting the miss reduction into \(+15.4\%\) \textsc{ipc}. Jacobi-2D falls
 between, touching neighbors at offsets \(\pm 1\) and \(\pm N\) of which only the
 former is contiguous, and gains \(+6.6\%\).
 
@@ -464,17 +461,13 @@ provisioned.
 
 The data bear this out with almost no residual. At L1, \textsc{ipc} varies by at
 most \(0.18\%\) (\textsc{ata}x) and by \(0.00\%\) for Jacobi-2D and Seidel-2D
-across the entire 2-to-16-way range. Deeper levels
-are flatter still: the L2 sweep moves \textsc{ipc} by \(0.00\%\) in all five
-kernels and the L3 sweep by at most \(0.0007\%\), as expected once L1 has absorbed
-the conflict pressure. The sole exception is the direct-mapped case, where with one
-way every alias necessarily evicts: a direct-mapped L1D carries a higher miss rate
-than an 8-way one---\(+96\%\) in Floyd-Warshall, \(+31\%\) in \textsc{gemm},
-\(+19\%\) in Jacobi-2D, \(+11\%\) in Seidel-2D, \(+3\%\) in \textsc{ata}x---yet
-even these are largely invisible in \textsc{ipc}, since eliminating
-Floyd-Warshall's \(96\%\) penalty is worth \(+0.29\%\). One additional way
-captures essentially all the conflict pressure these kernels produce; further
-associativity is wasted area.
+across the entire 2-to-16-way range; deeper levels are flatter still, once L1 has
+absorbed the conflict pressure. The sole exception is the direct-mapped case,
+where with one way every alias necessarily evicts: a direct-mapped L1D carries a
+higher miss rate than an 8-way one---by up to \(+96\%\) (Floyd-Warshall)---yet
+even this is largely invisible in \textsc{ipc}, since eliminating that \(96\%\)
+penalty is worth only \(+0.29\%\). One additional way captures essentially all the
+conflict pressure these kernels produce; further associativity is wasted area.
 
 \subsection{Capacity: A Threshold Effect, Not a Continuum}\label{sub:capacity}
 
@@ -498,31 +491,27 @@ the Ryzen~5600X (32~MiB) yields \(+5.9\%\), because what matters is whether the
 ranking presets by aggregate size would mispredict performance. Second, the one
 negative result runs in the expected direction: Seidel-2D loses \(3.1\%\)
 \textsc{ipc} under Small Embedded, the only preset shrinking the hierarchy below
-baseline (16~KiB L1, 128~KiB L2, 1~MiB L3); its 1.22~MiB grid exceeds that 1~MiB L3
-and the L3 miss rate jumps from \(7\times10^{-6}\) to \(1.0\)---every L3 access
+baseline; its 1.22~MiB grid exceeds that preset's 1~MiB L3 and every L3 access then
 misses. This is the threshold mechanism in reverse, confirming that the boundary,
 not the magnitude, governs the effect. Because datasets were reduced for
 tractability, four of five kernels sit on the insensitive side of that threshold, so
 our capacity effects are lower bounds.
 
-Two further null results deserve record. First, instruction-cache traffic is free: across
-all 155 simulations the L1I never exceeded 78 misses (at most \(0.34\)
-\textsc{mpki}), because by the time the binary calls \textit{libm5} to begin
-collecting statistics, the kernel's few kilobytes of instructions have been fetched
-and fit trivially in any L1I we simulate. L1I is therefore insensitive to every
-swept parameter and we exclude it. This is a general pitfall of
+Two further null results deserve record. First, instruction-cache traffic is
+free: the L1I never exceeded 78 misses (\(\leq 0.34\) \textsc{mpki}) in any run,
+because by the time \textit{libm5} starts collecting statistics the kernel's few
+kilobytes of instructions are already resident. This is a general pitfall of
 \textsc{roi}-scoped measurement rather than a property of these kernels: any study
-instrumenting a tight numerical loop will find its instruction-side statistics
-pre-warmed, and should not conclude that instruction fetch is unimportant in the
-full application. Second, dataset size is a confound: part of the cross-kernel
+instrumenting a tight loop will find its instruction-side statistics pre-warmed,
+and should not conclude that instruction fetch is unimportant in the full
+application. Second, dataset size is a confound: part of the cross-kernel
 variation in Table~\ref{tab:sensitivity} reflects dataset choice rather than
-intrinsic behavior, most consequentially at the extremes, since \textsc{ata}x is
-the only kernel at \texttt{LARGE\_\-DATA\-SET} and shows the largest response
-while Floyd-Warshall is the only one at \texttt{SMALL\_\-DATA\-SET} and shows the
-smallest. The mechanism is nevertheless identified, since dataset size acts on
-\(f_{\text{stall}}\) by changing the working set relative to the hierarchy:
-sensitivity is a property of the pair (kernel, dataset), which is why
-Table~\ref{tab:workloads} reports footprints.
+intrinsic behavior, most so at the extremes, since \textsc{ata}x alone uses
+\texttt{LARGE\_\-DATA\-SET} and shows the largest response while Floyd-Warshall
+alone uses \texttt{SMALL\_\-DATA\-SET} and the smallest. The mechanism is
+nonetheless identified, since dataset size acts on \(f_{\text{stall}}\) through
+the working set: sensitivity is a property of the pair (kernel, dataset), which is
+why Table~\ref{tab:workloads} reports footprints.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -532,27 +521,21 @@ numerical kernel. Essentially all observed line-size and capacity sensitivity
 follows from whether a kernel jointly satisfies two conditions: (i)~its access
 pattern is genuinely spatial rather than already absorbed by temporal reuse or
 compute intensity, and (ii)~its working set is large enough, relative to the
-hierarchy, that the kernel is miss-bound at all. \textsc{ata}x satisfies both and
-responds strongly to line size (\(+15.4\%\)) and capacity (\(+7.2\%\));
-\textsc{gemm} fails~(i) through its \(C_{ij}\) reuse and Floyd-Warshall fails~(ii)
-with a 127~KiB footprint inside a 256~KiB L2. The criterion is operational, not
+hierarchy, that the kernel is miss-bound at all. The criterion is operational, not
 merely explanatory: both conditions reduce to \(f_{\text{stall}}\), so a designer
-facing a new regular kernel can estimate its sensitivity from one baseline
-measurement rather than a sweep. Associativity needs no such estimate, being
-structurally low-leverage for this workload class because it targets conflict
-misses and regular strides generate few conflicts.
+can estimate a new kernel's sensitivity from one baseline measurement rather than a
+sweep. Associativity needs no such estimate, being structurally low-leverage
+because it targets conflict misses, which regular strides rarely produce.
 
 Several limitations bound these claims. The in-order core captures neither
 out-of-order execution nor memory-level parallelism, so our sensitivities are upper
-bounds and the Amdahl-style model remains untested where stalls are overlapped
-rather than exposed. Dataset reduction leaves four of five kernels below the
-\textsc{llc} threshold, making the capacity effects lower bounds, and the workloads
-are regular by construction, so the criterion's applicability to irregular
-applications remains open. Because the pipeline is a deterministic, idempotent build
-graph with pinned versions, it can be re-run, audited, or extended at low marginal
-cost \cite{repo:2026}: future work may scale datasets so all kernels straddle the
-\textsc{llc} threshold, add irregular applications, sweep replacement and
-prefetching policies, and re-run the grid on an out-of-order core.
+bounds and the Amdahl-style model is untested where stalls are overlapped. Dataset
+reduction leaves four of five kernels below the \textsc{llc} threshold, making the
+capacity effects lower bounds, and the regular workloads leave applicability to
+irregular ones open. Because the pipeline is a deterministic, idempotent build
+graph with pinned versions \cite{repo:2026}, future work can address these directly:
+scaling datasets past the \textsc{llc} threshold, adding irregular applications,
+sweeping replacement and prefetching policies, and evaluating an out-of-order core.
 
 \section*{Acknowledgments}
 This research was funded by the Minas Gerais State Research Foundation (FAPEMIG)
