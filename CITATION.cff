@@ -7,6 +7,12 @@ message: >-
   metadata from this file.
 type: software
 authors:
+  - given-names: Lucca
+    family-names: Mendes Alves Pellegrini
+    email: lucca@verticordia.com
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
   - given-names: Amanda
     family-names: Canizela Guimarães
     email: amanda.canizela@gmail.com
@@ -14,26 +20,26 @@ authors:
       Instituto de Ciências Exatas e Informática, Pontifícia
       Universidade Católica de Minas Gerais
   - given-names: Ariel Inácio
-    family-names: Jordão
+    family-names: Jordão Coelho
     email: arielijordao@gmail.com
     affiliation: >-
       Instituto de Ciências Exatas e Informática, Pontifícia
       Universidade Católica de Minas Gerais
-  - given-names: Lucca
-    family-names: Pellegrini
-    email: lucca@verticordia.com
-    affiliation: >-
-      Instituto de Ciências Exatas e Informática, Pontifícia
-      Universidade Católica de Minas Gerais
   - given-names: Paulo
-    family-names: Dimas
+    family-names: Dimas da Silva
     email: paulo.junior.1478361@sga.pucminas.br
     affiliation: >-
       Instituto de Ciências Exatas e Informática, Pontifícia
       Universidade Católica de Minas Gerais
   - given-names: Pedro Vitor
-    family-names: Andrade
+    family-names: Martins Caiafa Andrade
     email: pedrovitor0826@gmail.com
+    affiliation: >-
+      Instituto de Ciências Exatas e Informática, Pontifícia
+      Universidade Católica de Minas Gerais
+  - given-names: Matheus
+    family-names: Alcântara Souza
+    email: matheusalcantara@pucminas.br
     affiliation: >-
       Instituto de Ciências Exatas e Informática, Pontifícia
       Universidade Católica de Minas Gerais
