@@ -440,20 +440,20 @@ baseline L2 and just \(0.4\%\) of its cycles are stall-exposed---an artifact of
 our dataset reduction, not a property of the algorithm.
 
 Seidel-2D shows why absolute latency reductions must not be read as performance.
-It has one of the largest absolute drops in total miss latency in the suite,
-\(162\times10^9\) to \(20\times10^9\) ticks (\(-87.5\%\)), yet gains only \(+2.2\%\) \textsc{ipc}: its
-\(f_{\text{stall}}\) is just \(0.014\), since it executes \(2.0\times10^9\)
-instructions over a 1.22~MiB grid and is overwhelmingly compute-bound, and its
-in-place update carries loop-carried dependencies, so removing memory stalls
-exposes a dependency bound rather than releasing issue slots. A large relative change in a memory metric is thus
-compatible with negligible performance change whenever that metric governed a
-small share of execution time. No kernel failing either condition was rescued by a
-larger line, nor did any satisfying both fail to benefit.
+It has one of the largest absolute drops in total miss latency in the suite
+(\(-87.5\%\)), yet gains only \(+2.2\%\) \textsc{ipc}: its \(f_{\text{stall}}\) is
+just \(0.014\), as it is overwhelmingly compute-bound over a 1.22~MiB grid, and
+its in-place update carries loop-carried dependencies, so removing memory stalls
+exposes a dependency bound rather than releasing issue slots. A large relative
+change in a memory metric is thus compatible with negligible performance change
+whenever that metric governed a small share of execution time. No kernel failing
+either condition was rescued by a larger line, nor did any satisfying both fail to
+benefit.
 
 \subsection{Associativity: A Structurally Low-Leverage Parameter}\label{sub:assoc}
 
-Associativity's effect is not merely small but structurally bounded for this
-workload class, for a reason that generalizes beyond our five kernels. It addresses
+Associativity's effect is not merely small but structurally bounded for the
+evaluated workloads, for a reason that generalizes beyond our five kernels. It addresses
 conflict misses specifically, letting several lines that index to the same set
 coexist. Our kernels access memory at unit stride, or at a fixed offset of \(N\)
 for the stencils, so successive addresses spread roughly uniformly over the index
@@ -490,8 +490,9 @@ and \(+7.2\%\) for Large Server (64~MiB L3), precisely the configurations whose
 footprints of \(0.12\)--\(0.15\times\) the baseline \textsc{llc} and gain at most
 \(+2.7\%\), because they already fit.
 
-Two aspects are easy to misread. First, the effect is non-monotonic in nominal
-capacity: for \textsc{ata}x the i9-9900K preset (16~MiB L3) yields no gain while
+Two observations deserve further clarification. First, the effect is
+non-monotonic in nominal capacity: for \textsc{ata}x the i9-9900K preset
+(16~MiB L3) yields no gain while
 the Ryzen~5600X (32~MiB) yields \(+5.9\%\), because what matters is whether the
 \textsc{llc} crosses the kernel's reuse-distance threshold, not total bytes, so
 ranking presets by aggregate size would mispredict performance. Second, the one
@@ -525,10 +526,10 @@ Table~\ref{tab:workloads} reports footprints.
 
 \section{Conclusion}\label{sec:conclusion}
 
-The chief product of this work is a transferable criterion for deciding
-\textit{a priori} which cache parameter is worth tuning for a given regular
-numerical kernel. Essentially all observed line-size and capacity sensitivity is
-explained by whether a kernel jointly satisfies two conditions: (i)~its access
+The main outcome of this study is evidence that a transferable criterion can
+decide \textit{a priori} which cache parameter is worth tuning for a given regular
+numerical kernel. Essentially all observed line-size and capacity sensitivity
+follows from whether a kernel jointly satisfies two conditions: (i)~its access
 pattern is genuinely spatial rather than already absorbed by temporal reuse or
 compute intensity, and (ii)~its working set is large enough, relative to the
 hierarchy, that the kernel is miss-bound at all. \textsc{ata}x satisfies both and
