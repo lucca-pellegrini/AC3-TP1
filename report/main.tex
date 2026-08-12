@@ -147,27 +147,22 @@ region of interest (\textsc{roi}).
 The three factors differ by more than an order of magnitude in leverage: line
 size buys up to \(+15.4\%\) \textsc{ipc}, capacity up to \(+7.2\%\), and
 associativity above direct-mapped at most \(0.2\%\); but the ranking matters
-less than its explanation. Beyond the measurements, this work contributes
-\begin{enumerate*}[label=(\roman*), itemjoin={{; }}, itemjoin*={{; and }}]
-	\item an experimental design isolating a categorical capacity factor from two
-	numeric ones while holding core model, \textsc{roi}, dataset, and toolchain
-	fixed, so every delta is comparable across kernels and levels
-	\item a predictive criterion, since the two decisive mechanisms, namely
-	access-pattern spatiality and working-set size relative to the hierarchy,
-	reduce to one measurable quantity, \(f_{\text{stall}}\), the fraction of
-	baseline execution exposed to L1D miss latency, which orders the kernels
-	correctly for both factors and predicts the line-size speedups within
-	1.8~percentage points, so a new kernel's sensitivity follows from one
-	baseline run instead of a sweep
+less than its explanation. Our main contributions are:
+\begin{itemize}
+	\item an experimental design isolating each cache parameter, so every
+	measured change is attributable to a single factor and comparable across
+	kernels and levels;
+	\item a predictive criterion: the two decisive mechanisms reduce to one
+	measurable quantity, \(f_{\text{stall}}\), which orders the kernels for both
+	factors and predicts the line-size speedups, so a new kernel's sensitivity
+	follows from one baseline run rather than a sweep;
 	\item a reproducible artifact in which the methodology \textit{is} the
-	deliverable, since a pinned toolchain, gem5 at a recorded commit, the sweep,
-	figure generation, and this manuscript form one idempotent build graph
-	\cite{repo:2026} re-deriving every number here from gem5's raw
-	\texttt{stats.txt}
+	deliverable, as a single idempotent build graph \cite{repo:2026} re-derives
+	every number here from gem5's raw output; and
 	\item null results usually discarded: associativity is inert above
-	direct-mapped, most capacity presets match baseline, and L1I traffic is free (at
-	most 78 misses across all 155 runs)
-\end{enumerate*}.
+	direct-mapped, most capacity presets match baseline, and instruction-cache
+	traffic is negligible.
+\end{itemize}
 The upshot inverts the intuitive ordering of cache parameters for regular
 numerical workloads: most gains exploit spatial locality, not conflict avoidance
 or raw capacity.
