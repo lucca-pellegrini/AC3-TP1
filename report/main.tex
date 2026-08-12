@@ -381,12 +381,15 @@ exactly \(8.0\times\) for four of five kernels while \textsc{ipc} gains span
 	\end{tabular}
 \end{table}
 
-The cache behaves identically; what differs is each kernel's exposure to it,
-measured by \(f_{\text{stall}}\), the fraction of baseline cycles spent stalled on
-L1D misses (last column of Table~\ref{tab:sensitivity}). It ranges from \(0.004\)
-for Floyd-Warshall to \(0.090\) for \textsc{ata}x, a 25-fold spread, and orders the
-kernels identically for both sweeps: an identical \(8.0\times\) miss reduction
-buys little where there is little stall time to recover. Treating the line-size
+Although the cache exhibits very similar reductions in L1D misses across
+workloads, the resulting performance gains differ substantially because each
+workload exposes a different fraction of execution to memory stalls. This
+fraction is \(f_{\text{stall}}\) (last column of Table~\ref{tab:sensitivity}). It
+ranges from \(0.004\) for Floyd-Warshall to \(0.090\) for \textsc{ata}x, a
+25-fold spread, and orders the kernels identically for both sweeps: an identical
+\(8.0\times\) miss reduction buys little where there is little stall time to
+recover. To investigate whether this behavior can be explained analytically,
+treating the line-size
 sweep as Amdahl's law over the stalled fraction,
 \(\mathrm{speedup} = 1/(1 - k\,f_{\text{stall}})\) with \(k\) the fraction of
 misses eliminated (\(\approx0.875\)), predicts every measured speedup to within
