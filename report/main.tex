@@ -298,30 +298,28 @@ The five PolyBench Version~4.2.1 \cite{polybench:2016} kernels were chosen to
 combine differently the two mechanisms we identify as decisive: access-pattern
 spatiality and working-set size relative to the hierarchy; so the suite
 contains kernels satisfying neither, one, or both conditions;
-Table~\ref{tab:workloads} gives their datasets and working sets. \textsc{gemm} computes the dense product \(C \leftarrow \beta C +
-\alpha AB\), a core \textsc{blas} operation \cite{lawson:1979}, whose inner loop
-reuses the \(C_{ij}\) accumulator across the entire \(k\)-reduction.
-\textsc{ata}x computes \(y = A^{T}(A x)\), combining row-major streaming with
-column-wise accesses in the transpose phase, yielding mixed spatial locality and
-limited temporal reuse. Floyd-Warshall computes
-all-pairs shortest paths by dynamic programming over a 2D matrix
-\cite{floyd:1962, warshall:1962}, with dense, regular accesses and strong
-temporal reuse across the outer loop. Jacobi-2D applies a five-point stencil over a 2D
-grid \cite{golub:2013}, giving structured spatial locality at offsets \(\pm 1\) and
-\(\pm N\). Seidel-2D applies a nine-point in-place Gauss--Seidel update whose
-immediate reuse of new values introduces loop-carried dependencies, increasing
-temporal locality but reducing parallelism \cite{golub:2013}. All are \(O(n^3)\) in time
-and \(O(n^2)\) in memory except \textsc{ata}x, which is \(O(n^2)\) in both.
-Dataset sizes were reduced iteratively until each workload completed within a
-practical budget (on the order of days); Floyd-Warshall, with cubic complexity and
-a large constant factor, required \texttt{SMALL\_\-DATA\-SET}.
+Table~\ref{tab:workloads} gives their datasets and working sets. \textsc{gemm}
+computes the dense \textsc{blas} product \(C \leftarrow \beta C + \alpha AB\)
+\cite{lawson:1979}, whose inner loop reuses the \(C_{ij}\) accumulator across the
+\(k\)-reduction. \textsc{ata}x computes \(y = A^{T}(A x)\), combining row-major
+streaming with column-wise accesses, yielding mixed spatial locality and limited
+temporal reuse. Floyd-Warshall computes all-pairs shortest paths by dynamic
+programming \cite{floyd:1962, warshall:1962}, with regular accesses and strong
+temporal reuse across the outer loop. Jacobi-2D and Seidel-2D apply
+stencils over a 2D grid \cite{golub:2013}, giving structured spatial locality;
+Seidel-2D's in-place Gauss--Seidel update adds loop-carried dependencies that
+raise temporal locality but reduce parallelism. Dataset sizes were reduced
+iteratively until each workload completed within a practical budget (on the order
+of days); Floyd-Warshall, with cubic complexity and a large constant factor,
+required \texttt{SMALL\_\-DATA\-SET}. Collectively, the selected kernels span
+different combinations of spatial locality and working-set size, allowing both
+mechanisms investigated in this work to be independently observed.
 
 \begin{table}[!htb]
 	\centering
 	\caption{Dataset configuration and working-set footprint of each kernel,
-	relative to the 8~MiB baseline \textsc{llc}. All kernels use
-	double-precision data except Floyd-Warshall, whose PolyBench definition uses
-	\texttt{int}.}
+	relative to the 8~MiB baseline \textsc{llc}. All use double-precision data
+	except Floyd-Warshall, whose PolyBench definition uses \texttt{int}.}
 	\label{tab:workloads}
 	\small
 	\begin{tabular}{llccc}
