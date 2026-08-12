@@ -230,7 +230,9 @@ identical reduction in misses yields a smaller, configuration-dependent
 \textsc{ipc} change, entangling the cache effect with the core's ability to hide
 it. Under an in-order model an unserviced miss stalls the pipeline and
 \textsc{cpi} responds almost linearly, so our sensitivities are upper bounds that
-isolate the cache. We disable prefetching, which partially substitutes for line
+isolate the cache.
+
+We disable prefetching, which partially substitutes for line
 size and would mask the very effect under investigation, and we prefer gem5 to an
 interval-based simulator such as Sniper because our quantities of interest are
 per-level miss counts and latencies under a fully event-driven model. Finally,
