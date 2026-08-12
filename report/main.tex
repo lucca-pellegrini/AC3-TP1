@@ -206,8 +206,9 @@ Every element of the setup follows from the requirement that any observed change
 be attributable to exactly one cache parameter. We therefore sweep the three
 factors separately from a fixed baseline rather than jointly: comparing bundled
 commercial configurations confounds them, since presets differ in capacity
-\textit{and} line size \textit{and} associativity at once. This costs 155
-simulations, but it is the only route to per-parameter attribution. Capacity is
+\textit{and} line size \textit{and} associativity at once. This design
+results in 155 simulations while ensuring that every observed performance
+variation can be attributed to a single cache parameter. Capacity is
 varied as 11 multi-level presets derived from shipping commercial \textsc{cpu}s
 (Table~\ref{tbl:cachesizes}), since per-level capacities are co-designed under
 area and latency constraints and not chosen independently; being
