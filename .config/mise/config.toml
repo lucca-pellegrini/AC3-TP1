@@ -21,8 +21,8 @@ description = "Set up required TeX packages for the plots and report"
 run = '''
     set -eu
 
-    packages="dvipng type1cm cm-super underscore ieeetran embedfile"
-    files="IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty"
+    packages="dvipng type1cm cm-super underscore ieeetran embedfile babel-portuges"
+    files="IEEEtran.cls type1ec.sty type1cm.sty underscore.sty embedfile.sty brazilian.ldf"
 
     # Report every unmet dependency, both style files and binaries.
     survey_missing() {
