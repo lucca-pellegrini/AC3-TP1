@@ -1181,6 +1181,15 @@ class LaTeXFilter:
             # wrap at 80 columns instead of 79 (LuaTeX #900).
             while self.__lend - self.__lstart >= 80:
                 if self.TRACE: print('<{}> wrapping'.format(self.__pos))
+                if self.__pos >= len(self.__data):
+                    # The long line is the last thing in the buffer so
+                    # far: there is nothing to unwrap into yet.  Without
+                    # this check __ensure_line makes no progress and the
+                    # loop spins forever, which happens whenever TeX does
+                    # not wrap at 79 columns (e.g. TinyTeX ships
+                    # max_print_line=10000).  The caller re-parses from
+                    # the last restart point when more data arrives.
+                    break
                 self.__ensure_line()
                 data = data[:-1] + self.__data[self.__pos:self.__lend]
                 self.__pos = self.__lend

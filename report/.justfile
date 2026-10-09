@@ -5,6 +5,12 @@ NAME := "A_Quantitative_Cache_Evaluation_of_Select_PolyBench_Kernels_-_Andrade_C
 
 MAIN := "main"
 VER := `git describe --long --tags | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g'`
+
+# latexrun's log parser assumes TeX wraps terminal output at 79 columns, which
+# TinyTeX overrides (max_print_line=10000); pin it so the parser's unwrapping
+# heuristic sees what it expects regardless of the TeX distribution in use.
+export max_print_line := "79"
+
 LATEX := `realpath ../.venv/bin/python` + " latexrun --latex-cmd pdflatex"
 LATEXFLAGS := "-O build -Wall"
 CLEANFLAGS := "--clean-all -O build"

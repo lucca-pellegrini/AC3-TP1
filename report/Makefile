@@ -8,6 +8,10 @@ ETC        = Makefile references.bib sbc-template.sty sbc.bst
 FIG        = ../figures/*.pdf
 VER        = $(shell git describe --long --tags \
               | sed 's/^v//;s/\([^-]*-g\)/r\1/;s/-/./g')
+
+# See .justfile: keep TeX's terminal wrapping at 79 columns for latexrun.
+export max_print_line = 79
+
 LATEX      = $(realpath ../.venv/bin/python) latexrun --latex-cmd pdflatex
 LATEXFLAGS = -O build -Wall
 CLEANFLAGS = --clean-all -O build
