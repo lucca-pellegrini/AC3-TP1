@@ -23,6 +23,12 @@ final LaTeX report.
 Target platform: Linux x86_64 only. While gem5 itself is portable, parts of the
 automation (uv/Python setup and LaTeX/report build) are written for Linux.
 
+> [!NOTE]
+> Details specific to the paper itself (what the 8-page limit forced us to
+> compress or omit, supporting numbers that did not fit, corrections made in
+> the camera-ready version, and how to rebuild only the PDF) are in
+> [report/README.md](report/README.md). This file documents the pipeline.
+
 ## Full Demonstration
 
 [![asciicast](https://asciinema.org/a/Z8cBqfjylaG3CYfH.svg)](https://asciinema.org/a/Z8cBqfjylaG3CYfH?t=103)
@@ -44,7 +50,8 @@ automation (uv/Python setup and LaTeX/report build) are written for Linux.
   - array_stride.c, matrix_multiply.c, random_access.c (handwritten)
   - polybench.c (shared runtime)
 - [include/polybench.h](include/polybench.h): PolyBench configuration header
-- [report/](report/): IEEEtran paper sources; [report/main.tex](report/main.tex) is the manuscript
+- [report/](report/): Paper sources (SBC template); [report/main.tex](report/main.tex) is the
+  manuscript and [report/README.md](report/README.md) documents its constraints and omissions
 - [gem5/](https://github.com/gem5/gem5/tree/7a2b0e4): gem5 submodule (initialized by the build)
 
 ## Who Made This
@@ -100,7 +107,7 @@ Required (checked by `zig build check-deps`):
 Clone release tag with gem5 submodule (shallow clone recommended for saving disk space):
 
 ```bash
-git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.1 --depth=1 --recursive --shallow-submodules
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --branch=v0.1.2 --depth=1 --recursive --shallow-submodules
 cd AC3-TP1
 ```
 
@@ -149,7 +156,7 @@ pacman -S --needed gcc m4 git graphviz gperftools zlib mise
 ### Clone repo, trust config, and run
 
 ```bash
-git clone https://github.com/lucca-pellegrini/AC3-TP1.git --depth=1 --shallow-submodules --recursive --branch=v0.1.1
+git clone https://github.com/lucca-pellegrini/AC3-TP1.git --depth=1 --shallow-submodules --recursive --branch=v0.1.2
 cd AC3-TP1
 mise trust
 mise run # Or `mise report` to immediately run the entire build/simulation pipeline

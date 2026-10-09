@@ -34,7 +34,7 @@ useradd -m build
 #$ wait 500
 clear
 #$ wait 100
-git clone https://git.verticordia.com/pellegrini/AC3-TP1.git --branch=v0.1.1
+git clone https://git.verticordia.com/pellegrini/AC3-TP1.git --branch=v0.1.2
 
 #$ expect \]\$
 #$ wait 1500

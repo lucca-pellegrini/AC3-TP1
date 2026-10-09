@@ -1698,6 +1698,92 @@ def create_comparison_figures(
         _note_generated(build_stats)
 
 
+def create_cache_line_compact_figure(
+    all_results: Dict[str, List[SimulationStats]],
+    figures_dir: Path,
+    build_stats: FigureBuildStats,
+) -> None:
+    """Create a single, short two-panel figure (L1D miss rate and IPC versus
+    cache line size, all workloads) sized for a one-row slot in the report.
+
+    The per-metric comparison figures are 3.45 x 2.5 in and become illegible
+    when scaled down to fit a short slot; this figure is laid out at the
+    size it is printed, with a shared legend outside the axes.
+    """
+    param_type = "cache_line"
+    out_pdf = figures_dir / "compact_cache_line.pdf"
+    out_png = figures_dir / "compact_cache_line.png"
+    used_stats = _gather_stats_for_param(all_results, param_type, POLYBENCH_WORKLOADS)
+    if not used_stats:
+        return
+    if _outputs_up_to_date([out_pdf], _input_paths(used_stats)):
+        _note_skipped(build_stats)
+        return
+
+    # Printed at ~0.82 scale in the report, so use slightly larger fonts than
+    # the IEEE style defaults to land near 8 pt on the page.
+    font_overrides = {
+        "axes.labelsize": 10,
+        "xtick.labelsize": 9,
+        "ytick.labelsize": 9,
+        "legend.fontsize": 9,
+    }
+    with plt.style.context(STYLE_LIST), plt.rc_context(font_overrides):
+        st = get_style_params()
+        fig, (ax_mr, ax_ipc) = plt.subplots(1, 2, figsize=(5.4, 1.4))
+        panels = [
+            (ax_mr, lambda s: s.l1d_cache.miss_rate, "L1D miss rate", "(a)"),
+            (ax_ipc, lambda s: s.ipc, "IPC", "(b)"),
+        ]
+        handles: List[Any] = []
+        labels: List[str] = []
+        for ax, extractor, ylabel, tag in panels:
+            for idx, workload in enumerate(POLYBENCH_WORKLOADS):
+                if workload not in all_results:
+                    continue
+                x_values, filtered = get_sorted_data(all_results[workload], param_type)
+                if not filtered:
+                    continue
+                kw = _series_style_kwargs(
+                    idx,
+                    linestyles=st["linestyles"],
+                    markers=st["markers"],
+                    line_width=st["linewidth"],
+                    marker_size=st["markersize"] * 0.8,
+                )
+                (line,) = ax.plot(
+                    [float(x) for x in x_values],
+                    [extractor(s) for s in filtered],
+                    color=st["colors"][idx % len(st["colors"])],
+                    label=workload,
+                    **kw,
+                )
+                if ax is ax_mr:
+                    handles.append(line)
+                    labels.append(workload)
+            ax.set_xscale("log", base=2)
+            ax.set_xticks([32, 64, 128, 256])
+            ax.set_xticklabels(["32", "64", "128", "256"])
+            ax.minorticks_off()
+            ax.set_xlabel("Line size (bytes)")
+            ax.set_ylabel(ylabel)
+            ax.set_title(tag, loc="left", fontsize=st["font_label"], pad=2)
+        fig.legend(
+            handles,
+            labels,
+            loc="center left",
+            bbox_to_anchor=(1.0, 0.5),
+            frameon=False,
+            handlelength=1.6,
+            borderaxespad=0.0,
+        )
+        fig.tight_layout(pad=0.2, w_pad=1.2)
+        fig.savefig(out_pdf, bbox_inches="tight")
+        fig.savefig(out_png, bbox_inches="tight")
+        plt.close(fig)
+    _note_generated(build_stats)
+
+
 def save_results_csv(
     all_results: Dict[str, List[SimulationStats]], out_dir: Path
 ) -> None:
@@ -1860,6 +1946,7 @@ def main():
     # Generate comparison figures
     print("Generating comparison figures...")
     create_comparison_figures(all_results, figures_dir, build_stats)
+    create_cache_line_compact_figure(all_results, figures_dir, build_stats)
 
     # Save all numerical results to CSV using pandas
     try:
