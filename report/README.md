@@ -29,7 +29,7 @@ the paper; it is the long version of it.
 - Addressing the reviews, before any cutting, pushed the body to roughly 9.5
   pages. Reaching eight again took six successive rounds of tightening.
 - The final PDF is ten pages: eight of body and acknowledgments, two of
-  references. The reference list grew from 13 to 18 entries and is not
+  references. The reference list grew from 13 to 19 entries and is not
   counted against the limit.
 - Trimming was done paragraph by paragraph, favoring removal of restatement
   over removal of evidence. Where a claim and its supporting number competed
@@ -69,12 +69,18 @@ The three original references (Khoshavi and DeMara 2018, Bueno et al. 2024,
 Shahid et al. 2025) were kept but compressed from two paragraphs to about
 seven lines.
 
+Two further references were added during the citation audit (see below):
+Dave and Kotak (2024), a gem5 sweep of L1 size, associativity, and line size
+over nine big-data applications that reports miss rates only, and Saha (2026),
+a concurrent preprint sweeping the same three L1 parameters over three
+microkernels with IPC. Each gets one clause.
+
 What did not fit: a fuller account of how Smith’s empirical line-size fit and
 his “mean delay per reference” model relate to our Eq. 1; a comparison with
 Przybylski, Horowitz, and Hennessy (1989) on performance-optimal multi-level
 hierarchies, which is the natural precedent for sweeping capacity per level;
-and any discussion of gem5-based cache studies on PolyBench specifically,
-which we could not survey adequately in the space available.
+and any substantive discussion of Dave and Kotak or Saha beyond the clause
+each receives.
 
 ### Methodology
 
@@ -371,21 +377,56 @@ each rewording was made line-neutral so the body stayed within eight pages.
   halving associativity from 8 to 4, 4 to 2, and 2 to 1 ways raised miss
   ratios by about 5%, 10%, and 30% on their traces. (Relative to direct-mapped,
   their two-way and eight-way caches have 22% and 34% lower miss ratios, so the
-  gloss was not far off; the numbers are simply more defensible.)
+  gloss was not far off; the numbers are simply more defensible.) In
+  Section 4.3, “for regular strides the second way captures essentially all
+  the conflict pressure” became “for these five kernels …”, so that our
+  measurement, not their paper, carries the workload-specific conclusion.
+- **Smith (1987), attribution**: “finds his transfer-time penalty reappearing
+  at 256-byte lines” could be read as attributing a 256-byte measurement to
+  Smith, whose data stop at 128 bytes. It now reads “at 256-byte lines exposes
+  the transfer-time penalty he discussed”.
 - **Gholami et al. (2024)**: the paper studies the compute/bandwidth gap in AI
-  serving, not latency on general-purpose cores. “Still widening” became
-  “still widening in bandwidth”, which is what their data show.
+  serving on server hardware, not latency on general-purpose cores. “Still
+  widening” became “still widening in server bandwidth”, and the clause it
+  supports was softened from “the dominant first-order constraint” to “a
+  first-order constraint”.
 - **Shahid et al. (2025)**: “reports aggregate performance, not per-level
-  misses” was too categorical, since the paper does report cache hit/miss
-  rates during model validation. It now reads “optimizes on IPC and resource
-  cost, not per-level misses”, which describes its design-space results.
+  misses” was too categorical, since the paper does report cache hit rates
+  during model validation. It now reads “reporting IPC, resource cost, and some
+  cache-hit rates rather than per-level attribution”.
+- **Bueno et al. (2024), second pass**: the comparator and denominator of the
+  30% are now explicit: reorderings are counted “against full simulation” and
+  the reduction is “versus SimPoint”.
+- **Khoshavi and DeMara (2018), provenance of 51.7%**: confirmed to come from
+  the IEEE Access version (via the University of Central Florida’s record of
+  the published article, which states “51.7% on average compared to
+  conventional STT-MRAM L2 design across PARSEC and SPEC2006”). The arXiv
+  preprint reports 51.4% against SRAM over PARSEC only; we cite the journal
+  version and its number.
 - **Williams et al. (2009), Roofline**: “for overlapped accesses” attributed to
   the model an assumption we could not point to in the text. Roofline is now
   characterized by what it is: a bound on attainable throughput from arithmetic
   intensity, peak compute, and peak bandwidth.
 - **Literature-gap claim**: “The gap is thus twofold: no … and no …” asserted
-  an absence we had not exhaustively surveyed (see “Related work” above). It is
-  now “We know of no … and of no …”, which is what we can defend.
+  an absence we had not exhaustively surveyed. It became “We know of no … and
+  of no …”, and then, after the search recorded below turned up two closer
+  precedents, “We know of no study *combining* cross-workload, multi-parameter
+  performance sensitivity over a full hierarchy *with* a mechanized pipeline in
+  which the methodology is itself the artifact”. The conjunction is deliberate:
+  each half alone has precedents; the combination is what we claim.
+- **Dave and Kotak (2024)** and **Saha (2026)**: added as the closest
+  precedents found by that search. Dave and Kotak sweep L1 size (1 KiB–1 MiB),
+  associativity (1–16 ways), and line size (8–64 bytes) in gem5 with
+  TimingSimpleCPU over nine big-data applications, but report miss rates only
+  and explicitly leave IPC to future work. Saha is a Figshare preprint dated
+  2026-05-13 (after this paper’s submission) sweeping L1 size, associativity,
+  and line size over three synthetic microkernels (matrix multiply, streaming,
+  random access) with IPC, proposing a normalized “Cache Sensitivity Score”,
+  and checking the AMAT model and a MinorCPU variant. It is the closest work
+  in spirit; it differs in using microkernels rather than benchmark kernels,
+  an L1-only two-level hierarchy, and no executable artifact that we could
+  find. Neither offers a quantity explaining why workloads differ, which is
+  what `f_stall` is for.
 - **Lawson et al. (1979)**: removed. It is the Level-1 BLAS paper
   (vector–vector operations) and covers neither atax’s matrix–vector products
   (Level 2) nor gemm (Level 3). The pinned PolyBench source is the reference
@@ -399,6 +440,39 @@ each rewording was made line-neutral so the body stayed within eight pages.
   0.15.2 release (October 2025) rather than the website with a 2024 date; musl
   carries the version bundled by that Zig release (1.2.5); the gem5 citation
   key `gem5-20:2007` became `gem5:2020`, matching the paper’s year.
+
+### Basis of the novelty claim: the literature search
+
+The “we know of no study combining …” sentence rests on the following, which
+is a targeted search rather than a systematic review; we record it so the
+claim can be checked and, if a counterexample exists, corrected.
+
+- **When**: October 2026, during the camera-ready citation audit. The
+  original submission relied on the authors’ reading of the gem5 and cache
+  literature without a recorded search.
+- **Where**: general web search (which indexes ACM DL, IEEE Xplore, arXiv,
+  Figshare, CiteSeerX, and publisher sites), Crossref’s bibliographic query
+  API, and Figshare’s article search API.
+- **Terms**: “gem5 PolyBench cache line size associativity capacity
+  sensitivity”; “gem5 cache sensitivity IPC per-level misses”; “cache
+  hierarchy design space exploration gem5 workload”; the titles of each
+  candidate found, to resolve metadata.
+- **Inclusion**: any study that sweeps two or more of {capacity, line size,
+  associativity} across more than one workload in a timing-accurate simulator
+  and reports performance (IPC, CPI, or time), not miss ratio alone.
+- **Found and cited**: Dave and Kotak (2024) (three parameters, nine
+  workloads, miss rates only); Saha (2026) (three L1 parameters, three
+  microkernels, IPC; preprint). Also found and not cited for lack of space:
+  a 2024 ICMLCA short paper sweeping L1/L2 capacity only, on SPLASH-2 under a
+  dual-core gem5 model with runtime as the metric (one parameter, so outside
+  the inclusion rule); and several course assignments that sweep these
+  parameters on gem5 without being publications.
+- **Not found**: any study that both sweeps all three parameters over a
+  multi-level hierarchy with performance as the metric *and* ships the
+  procedure as an executable artifact. That conjunction is the claim.
+
+A reader who knows of such a study should treat our sentence as superseded;
+the rest of the paper does not depend on it.
 
 ## Reviewer Requests Deferred to Future Work
 

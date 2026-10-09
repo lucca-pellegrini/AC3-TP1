@@ -112,8 +112,8 @@
 \section{Introduction}
 
 The disparity between processor and main memory speeds---the \textit{memory wall}
-identified three decades ago \cite{wulf:1995} and still widening in bandwidth
-\cite{gholami:2024}---remains the dominant first-order constraint on
+identified three decades ago \cite{wulf:1995}, still widening in server
+bandwidth \cite{gholami:2024}---remains a first-order constraint on
 single-thread performance, and every modern processor mitigates it with a
 multi-level cache hierarchy: private first-level instruction and data caches
 (L1I, L1D) backed by larger, slower shared levels up to the last-level cache
@@ -121,9 +121,8 @@ multi-level cache hierarchy: private first-level instruction and data caches
 replacement policy, latency---are neither independent nor uniformly important.
 The designer's practical question is not whether a larger or more associative
 cache helps, but which parameter, at a fixed transistor and energy budget, buys
-the most performance for a given class of access patterns, which analysis alone
-cannot settle, since the effects interact through miss classification and
-compute intensity.
+the most performance for a given class of access patterns; the interacting
+effects keep analysis alone from settling it.
 
 The literature offers abundant evidence on individual points of this design space
 but little that lets a practitioner rank the parameters. Classic trace-driven
@@ -136,10 +135,10 @@ either fixes the hierarchy and varies one dimension \cite{khoshavi:2018}, sweeps
 many parameters for one core and reports aggregate performance
 \cite{shahid:2025}, or shows that the simulation window alone can reorder
 cache-policy rankings \cite{bueno:2024}---yet such procedures are seldom
-shipped in executable form. We know of no \textit{cross-workload,
-multi-parameter} performance sensitivity data under one consistent,
-timing-accurate methodology, and of no \textit{mechanized} pipeline in which
-that methodology is itself the artifact.
+shipped in executable form. We know of no study combining
+\textit{cross-workload, multi-parameter} performance sensitivity over a full
+hierarchy with a \textit{mechanized} pipeline in which the methodology is
+itself the artifact.
 
 We close it with a factor-isolating study whose entire pipeline is one
 version-pinned build graph executable by a single
@@ -175,15 +174,18 @@ The parameters we sweep were first characterized by trace-driven simulation.
 \enquote{relatively stable across workloads}, with an optimum of 16--64 bytes set
 by the memory of the time; our timing-accurate sweep reproduces that stability
 (a near-exact \(8\times\) miss reduction in every kernel), shows its performance
-value nonetheless varying 30-fold, and finds his transfer-time penalty
-reappearing at 256-byte lines. \cite{hill:1989} quantified
+value nonetheless varying 30-fold, and at 256-byte lines exposes the
+transfer-time penalty he discussed. \cite{hill:1989} quantified
 associativity: halving it from 8 to 4, 4 to 2, and 2 to 1 ways raised miss
 ratios by about 5, 10, and 30\% on general-purpose traces; our regular kernels
 are the limiting case in which returns beyond two ways vanish. \cite{cantin:2001} tabulated miss ratios over capacity and
 associativity for \textsc{spec cpu2000}, the closest precedent to a
-cross-workload, multi-parameter survey, but reports miss ratios only, holds line
-size fixed, and offers no quantity explaining why benchmarks differ. We report
-performance, sweep three parameters, and supply that quantity.
+cross-workload, multi-parameter survey, but reports miss ratios only and holds
+line size fixed; \cite{dave:2024} sweep size, associativity, and line size in
+gem5 over nine big-data applications but also report miss rates only; and a
+concurrent preprint \cite{saha:2026} sweeps the same three L1 parameters over
+three microkernels, likewise finding sensitivity workload-specific. None offers
+a quantity explaining why workloads differ; we supply one.
 
 That quantity, \(f_{\text{stall}}\), is not new in form: it is the memory-stall
 term of the classic decomposition \(\text{\textsc{cpu} time} =
@@ -194,15 +196,16 @@ exactly the stall time. It differs in regime from Roofline \cite{williams:2009},
 which bounds attainable throughput by arithmetic intensity, peak compute, and
 peak bandwidth; our core is latency-bound with one outstanding miss, where the
 stall term is additive and Amdahl's law needs no overlap correction. Our
-contribution is the empirical demonstration that it orders kernels for two
-parameters and predicts the line-size speedup from one run. Closer in time,
+contribution is empirical: it orders kernels for two parameters and predicts
+line-size speedups from one run. Closer in time,
 \cite{khoshavi:2018} partitions an \textsc{stt-ram} L2 by retention and cuts L2
 read misses 51.7\% against a conventional \textsc{stt-ram} L2, one fixed
 hierarchy; \cite{shahid:2025} explores the \textsc{cva6} \textsc{risc-v} design
-space in gem5 but optimizes on \textsc{ipc} and resource cost, not per-level
-misses; and \cite{bueno:2024} shows that the simulation window reorders
-replacement-policy rankings, and that \textsc{llc}-activity weighting cuts such
-reorderings by over 30\%, our motivation for an executable procedure.
+space in gem5, reporting \textsc{ipc}, resource cost, and some cache-hit rates
+rather than per-level attribution; and \cite{bueno:2024} shows that the
+simulation window reorders replacement-policy rankings against full simulation,
+and that \textsc{llc}-activity weighting cuts such reorderings by over 30\%
+versus SimPoint, our motivation for an executable procedure.
 
 \section{Methodology}\label{sec:methodology}
 \subsection{Experimental Design}\label{sub:rationale}
@@ -229,11 +232,11 @@ Three further choices isolate the cache from the core. We use gem5's in-order
 timing: an out-of-order core would overlap miss latency with independent work,
 entangling the cache effect with the core's ability to hide it, whereas here
 every miss stalls the core for its full latency, so \textsc{cpi} responds
-additively, which is what makes the analysis of Section~\ref{sec:results} exact. We disable prefetching, which partially
+additively, making the analysis of Section~\ref{sec:results} exact. We disable prefetching, which partially
 substitutes for line size and would mask the very effect under investigation.
 And datasets are reduced per kernel (Table~\ref{tab:workloads}), since 155
-runs at \texttt{LARGE\_\-DATA\-SET} would be prohibitive; this compresses the
-capacity effects we measure (Section~\ref{sub:capacity}).
+runs at \texttt{LARGE\_\-DATA\-SET} would be prohibitive, which compresses the
+capacity effects (Section~\ref{sub:capacity}).
 
 \begin{table}[!htb]
 	\centering
@@ -272,8 +275,7 @@ for it, and the controller's mean read-queue occupancy is exactly 1.00 in every
 run. Each workload was compiled with
 GCC at \texttt{-O3} as a static x86-64 \textsc{elf} against musl \cite{musl} and
 gem5's \textit{libm5}, whose calls immediately before and after the kernel
-invocation confine statistics to the \textsc{roi}, excluding initialization and
-output.
+invocation confine statistics to the \textsc{roi}.
 
 Two consequences of the core model must be stated. Absolute \textsc{ipc} is low
 (0.13--0.15, \textsc{cpi} \(\approx 7\)) because \textit{TimingSimpleCPU} is
@@ -282,9 +284,8 @@ instruction and pays the full 4-cycle L1 hit latency on every fetch and access,
 so 6.5--6.8 cycles per instruction are fixed overhead independent of the cache,
 and only relative changes are meaningful. That overhead also inflates the
 denominator of every stall fraction: a pipelined in-order core with base
-\textsc{cpi} near 1 would show larger sensitivities, and an out-of-order core
-smaller ones. The kernel ordering and the additive structure, not the absolute
-magnitudes, are the transferable results.
+\textsc{cpi} near 1 would show larger sensitivities, an out-of-order core
+smaller; the ordering and additive structure, not the magnitudes, transfer.
 
 From each run's \textsc{roi} statistics we record \textsc{ipc}, per-level hits,
 misses, miss rates, \textsc{mpki} (misses per kilo-instruction), and summed miss
@@ -327,8 +328,7 @@ Seidel-2D apply five-point stencils \cite{golub:2013}, touching neighbors at
 offsets \(\pm 1\) (same or adjacent line) and \(\pm N\) (adjacent rows, 2--3~KiB
 apart, so the three live rows stay in L1D); Jacobi sweeps two arrays alternately,
 while Seidel-2D's in-place update adds loop-carried dependencies. Datasets were
-reduced until each run completed within days; Floyd-Warshall, with cubic
-complexity, required \texttt{SMALL\_\-DATA\-SET}.
+cut until runs took days at most; cubic Floyd-Warshall needed \texttt{SMALL}.
 
 \begin{table}[!htb]
 	\centering
@@ -410,8 +410,8 @@ is then Amdahl's law with stalled fraction \(f_{32} = 2f/(1+f)\) and an
 \end{equation}
 Table~\ref{tab:sensitivity} compares this prediction, from the baseline run
 alone, with the measured speedups: the error is at most 0.3~percentage points for
-four kernels and 1.4 points for \textsc{ata}x, in every case a slight
-over-prediction, whose cause Section~\ref{sub:cacheline} identifies.
+four kernels and 1.4 points for \textsc{ata}x, all slight over-predictions
+explained in Section~\ref{sub:cacheline}.
 
 \begin{figure}[!htb]
 	\centering
@@ -487,7 +487,7 @@ has a miss rate up to \(96\%\) higher than an 8-way one (Floyd-Warshall), yet
 even this is largely invisible in \textsc{ipc}, since eliminating it is worth
 only \(+0.29\%\). This is the limiting case of \cite{hill:1989}: on general-purpose
 traces each doubling beyond two ways still paid a diminishing return, whereas for
-regular strides the second way captures essentially all the conflict pressure.
+these five kernels the second way captures essentially all the conflict pressure.
 One curiosity runs the other way: \textsc{gemm}'s direct-mapped L2 is \(0.5\%\)
 \textit{faster} than 8-way \textsc{lru}, since cyclically streaming \(B\)
 (422~KiB) through 256~KiB leaves \textsc{lru} nothing (5.5~K hits) while direct
@@ -504,7 +504,7 @@ the hierarchy, and the only one with a substantial response: \(+5.9\%\) for the
 Ryzen~5600X and 7700X presets (32~MiB L3) and \(+7.2\%\) for Large Server (64~MiB
 L3), precisely the configurations whose \textsc{llc} holds a meaningful fraction
 of \(A\). The other four, at \(0.12\)--\(0.15\times\) the baseline \textsc{llc},
-gain at most \(+2.7\%\), because they already fit.
+gain at most \(+2.7\%\): they already fit.
 
 The effect is non-monotonic in nominal capacity: for \textsc{ata}x the i9-9900K
 preset (16~MiB L3) yields no gain while the Ryzen~5600X (32~MiB) yields
@@ -517,9 +517,9 @@ the insensitive side of the threshold, so our capacity effects are lower bounds
 and part of the cross-kernel variation in Table~\ref{tab:sensitivity} reflects
 dataset choice: sensitivity is a property of the pair (kernel, dataset), acting
 through \(f_{\text{stall}}\). One further null result: the L1I never exceeded 44
-misses in any run, as the kernel's few kilobytes of instructions are resident
-before \textit{libm5} starts collecting---a pitfall of \textsc{roi}-scoped
-measurement, not evidence that instruction fetch is unimportant.
+misses in any run, as the kernel's few kilobytes of code are resident before
+\textit{libm5} starts collecting---a pitfall of \textsc{roi} scoping, not evidence
+that instruction fetch is unimportant.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -544,7 +544,7 @@ line size exploits here. The workloads are regular polyhedral kernels at reduced
 datasets, which says nothing about irregular or pointer-chasing applications,
 where conflict misses and associativity may matter. Future work on the same
 pipeline can address these: larger datasets, irregular applications,
-prefetchers, replacement policies, and pipelined and out-of-order cores.
+prefetchers, replacement policies, and pipelined or out-of-order cores.
 
 \section*{Acknowledgments}
 This research was funded by the Minas Gerais State Research Foundation (FAPEMIG)
