@@ -474,6 +474,138 @@ claim can be checked and, if a counterexample exists, corrected.
 A reader who knows of such a study should treat our sentence as superseded;
 the rest of the paper does not depend on it.
 
+### Second pass: the manuscript’s own inferential claims
+
+A final read of the revised PDF, independent of the bibliography, turned up
+one arithmetic error and several places where the text claimed more than the
+experiment established. Each was checked against `results/` before the text
+was changed; in two cases the data supported a *stronger* statement than the
+hedge a reviewer would have asked for.
+
+- **DRAM traffic units (Section 4.2)**: the text said “38.5 MiB (32.0 read,
+  8.4 written back)”, which does not add up. The components had been
+  converted to decimal megabytes (31.97 MB, 8.40 MB) and the total to MiB.
+  Corrected to 30.5 MiB read, 8.0 MiB written back, 38.5 MiB total
+  (`mem_ctrl.dram.bytesRead::total` = 31,969,984 B, `bytesWritten::total` =
+  8,397,248 B).
+- **Capacity attribution (Section 4.4)**: Section 3.1 promised never to
+  attribute a preset’s effect to a single level, yet Section 4.4 attributed
+  atax’s gain to the LLC. The per-preset statistics resolve this, and the
+  paper now shows the attribution rather than hedging it:
+
+  | Preset         | L1 / L2 / L3     | atax dIPC | atax L3 misses | L2 misses |
+  | -------------- | ---------------- | --------: | -------------: | --------: |
+  | baseline       | 32K / 256K / 8M  |     0.00% |        499,531 |   499,531 |
+  | i9-9900K       | 32K / 256K / 16M |     0.00% |        499,531 |   499,531 |
+  | Cortex A78     | 32K / 512K / 4M  |     0.00% |        499,531 |   499,531 |
+  | Intel Atom     | 32K / 1M / 4M    |     0.00% |        499,531 |   499,531 |
+  | IBM POWER10    | 32K / 2M / 8M    |     0.00% |        499,531 |   499,531 |
+  | Small Embedded | 16K / 128K / 1M  |    −0.41% |        499,531 |   499,531 |
+  | Ryzen 5600X    | 32K / 512K / 32M |    +5.86% |            513 |   499,531 |
+  | Ryzen 7700X    | 32K / 1M / 32M   |    +5.86% |            513 |   499,531 |
+  | Apple M1       | 64K / 4M / 8M    |    +1.20% |        499,696 |   499,700 |
+  | Apple M2       | 64K / 4M / 16M   |    +1.17% |        499,644 |   499,700 |
+  | Large Server   | 64K / 2M / 64M   |    +7.17% |            513 |   499,626 |
+
+  L2 ranges over 256 KiB–2 MiB with no effect; L3 ≥ 32 MiB is the single
+  variable behind +5.9%, and a 64 KiB L1D the single variable behind +1.2%;
+  Large Server combines both. Section 3.1 now says effects are attributed to
+  a level “only where per-level miss counts single it out”.
+- **Warm start, and what the atax capacity effect actually is (Sections 3.2
+  and 4.4)**: the paper did not say whether caches are flushed at ROI entry.
+  They are not: `m5_reset_stats` resets counters only, and the kernel runs on
+  whatever its PolyBench initialization left in the caches. For four kernels
+  this is immaterial (their data fit L2/L3 and are reused inside the ROI).
+  For atax it is the entire mechanism: the ROI streams A exactly once, so no
+  in-ROI reuse can benefit from a larger L3. The gain appears because A
+  (30.4 MiB), written by initialization, is still resident in a 32 MiB L3
+  when the kernel starts, and is not in a 16 MiB L3 (LRU streaming retains
+  nothing useful). The earlier text’s “reuse-distance threshold” was reuse
+  across the ROI boundary. The paper now states the warm start explicitly in
+  Section 3.2 and says in Section 4.4 that a cold start would show no capacity
+  effect for atax at all. This is also why the four non-atax kernels move
+  under 4 KiB to DRAM in the ROI.
+- **Miss classification (Section 4.3)**: “their misses are compulsory and
+  capacity misses” asserted a 3C classification the paper had not performed.
+  The associativity sweep itself supplies the evidence, so the text now
+  reports it: L1D miss counts from 1 to 16 ways are
+
+  | Kernel         |     1-way |     2-way |     4-way |     8-way |    16-way |
+  | -------------- | --------: | --------: | --------: | --------: | --------: |
+  | atax           | 1,682,089 | 1,544,400 | 1,572,611 | 1,628,490 | 1,727,722 |
+  | jacobi-2d      | 3,717,603 | 3,112,803 | 3,112,803 | 3,112,803 | 3,112,803 |
+  | gemm           | 1,750,717 | 1,342,192 | 1,337,003 | 1,337,003 | 1,337,003 |
+  | seidel-2d      | 4,440,805 | 3,990,005 | 3,990,005 | 3,990,005 | 3,990,005 |
+  | floyd-warshall |   712,200 |   364,351 |   363,362 |   363,362 |   363,362 |
+
+  Identical from 2 to 16 ways for three kernels, within 0.4% for gemm, and
+  ±6% for atax (non-monotonic: 16-way LRU has *more* misses than 2-way,
+  because its 50 KiB cyclic working set, one 16.8 KiB row of A plus the two
+  16.8 KiB vectors, thrashes a 32 KiB LRU cache more thoroughly the more
+  ways it has). Conflict misses are real at one way (up to +96%) and are
+  exhausted by the second. The text no longer names miss categories it did
+  not measure.
+- **Residual of Eq. 1 for atax (Section 4.2)**: the 1.4-point over-prediction
+  was attributed entirely to the latency rise at 256 bytes, but the miss
+  reduction is also slightly sublinear (7.6x rather than 8x; 3.84x rather
+  than 4x from 64 to 256 bytes). Recomputing the prediction with the measured
+  miss count but constant latency gives +16.7% (vs. +16.8% ideal); adding the
+  measured latency gives +15.5% (vs. +15.4% measured). The paper now says the
+  latency rise accounts for 1.2 of the 1.4 points and the sublinear miss
+  reduction for 0.1.
+- **Table 1 provenance**: the caption now says the presets *approximate*
+  public specifications, that Apple’s system-level cache stands in for L3,
+  and that Small Embedded and Large Server are synthetic. The sizes were
+  taken from vendor specification pages and public reviews at the time of
+  the original study; we did not keep a per-preset citation list and do not
+  claim the presets reproduce any product’s hierarchy exactly (L1I = L1D is
+  itself a simplification for Apple and POWER10, whose L1I is larger).
+- **“Version-pinned”**: the introduction called the pipeline version-pinned
+  while Section 3.3 admits the C toolchain is only constrained to GCC >= 14.
+  The introduction now says “reproducible build graph”; the pinning details
+  stay in Section 3.3.
+
+### Third pass
+
+- **Footprint range (Section 4.4)**: “0.12–0.15x the baseline LLC” excluded
+  Floyd-Warshall (0.015x, Table 2). Corrected to 0.015–0.15x.
+- **“Lower bounds” (Section 4.4)**: smaller datasets can hide capacity
+  sensitivity, but a different dataset can also change reuse and residency in
+  ways that do not guarantee a larger effect, so “lower bounds” claimed a
+  monotonicity we had not shown. Now “our capacity results likely understate
+  the sensitivity of larger workloads”.
+- **Associativity mechanism (Section 4.3)**: “successive addresses spread
+  uniformly over the index bits” was a generalization about regular strides;
+  set coverage actually depends on stride, line size, and set count. The
+  text now states the configuration-specific fact that supports the result:
+  each kernel’s live data occupy at most four ways of any L1D set. Checked
+  against the geometry of the baseline L1D (64 sets x 8 ways x 64 B):
+  Seidel-2D’s three live 3,200-byte rows are 50 lines each at a 50-set offset,
+  so at most 3 lines share a set; Jacobi-2D’s three source rows plus one
+  destination row (2,000 B each) give at most 3; gemm’s resident C row and
+  streaming B row (1,760 B each) at most 2; Floyd-Warshall’s 720-byte rows at
+  most 1. atax’s 16.8 KiB row plus two 16.8 KiB vectors (789 lines over 64
+  sets, about 12 per set) exceed 8 ways, which is why it is the one kernel
+  whose L1D miss count moves (±6%) with associativity; the text names it as
+  the exception.
+- **Saha (2026), verified**: the preprint PDF was obtained from Figshare
+  (`comp_arch (2).pdf`, 3 pages). It is a student letter from VIT Vellore
+  using gem5 v25.1.0.0, X86TimingSimpleCPU at 1 GHz, sweeping L1 capacity
+  (4–64 kB), associativity (1–8 ways), and line size (32–128 B) with L2
+  fixed at 256 kB 4-way, over three custom microbenchmarks (matmul N=64,
+  sequential stream, 4 MB random); it defines a Cache Sensitivity Score as
+  normalized IPC range, compares AMAT-predicted to simulated CPI, and reruns
+  30 configurations on MinorCPU. It mentions no code release. Our clause now
+  says “for L1 only and on the same core model, over three synthetic
+  microkernels”, which is what it does. (One of its claims, that streaming
+  shows memory-level-parallelism overlap “even in simpler in-order
+  architectures”, is at odds with our measurement that TimingSimpleCPU keeps
+  exactly one DRAM request outstanding; we do not take this up in the paper.)
+- **Introduction gap sentence**: “little that lets a practitioner rank the
+  parameters” was too strong once Saha’s CSS, which does rank them per
+  workload, was in hand. Now “little that ranks the parameters across
+  workloads *and* explains the ranking”, which is the combination we claim.
+
 ## Reviewer Requests Deferred to Future Work
 
 These were raised in the reviews, are acknowledged in Section 5, and are not

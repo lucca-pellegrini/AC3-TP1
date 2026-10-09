@@ -118,14 +118,14 @@ single-thread performance, and every modern processor mitigates it with a
 multi-level cache hierarchy: private first-level instruction and data caches
 (L1I, L1D) backed by larger, slower shared levels up to the last-level cache
 (\textsc{llc}). Its parameters---capacity, line (block) size, associativity,
-replacement policy, latency---are neither independent nor uniformly important.
-The designer's practical question is not whether a larger or more associative
-cache helps, but which parameter, at a fixed transistor and energy budget, buys
-the most performance for a given class of access patterns; the interacting
-effects keep analysis alone from settling it.
+replacement policy, latency---are neither independent nor uniformly important,
+and the designer's practical question is not whether a larger or more
+associative cache helps, but which parameter, at a fixed transistor and energy
+budget, buys the most performance for a given class of access patterns.
 
 The literature offers abundant evidence on individual points of this design space
-but little that lets a practitioner rank the parameters. Classic trace-driven
+but little that ranks the parameters across workloads \textit{and} explains the
+ranking. Classic trace-driven
 studies established how each parameter moves the \textit{miss ratio}---line size
 \cite{smith:1987}, associativity \cite{hill:1989}, both across a benchmark suite
 \cite{cantin:2001}---but a miss ratio is not performance: the same miss reduction
@@ -141,7 +141,7 @@ hierarchy with a \textit{mechanized} pipeline in which the methodology is
 itself the artifact.
 
 We close it with a factor-isolating study whose entire pipeline is one
-version-pinned build graph executable by a single
+reproducible build graph executable by a single
 command.\footnote{All code, configurations, raw gem5 output, and this manuscript
 are public at \url{https://github.com/lucca-pellegrini/AC3-TP1} (tag
 \texttt{v0.1.2}); one command re-derives every number and figure here.} Varying
@@ -150,9 +150,9 @@ presets derived from shipping commercial \textsc{cpu}s, line sizes from 32 to 25
 bytes, and associativities from direct-mapped to 16-way per level, over five
 PolyBench~4.2.1 kernels \cite{polybench:2016}: dense streaming (\textsc{ata}x,
 \textsc{gemm}), dynamic programming (Floyd-Warshall), and iterative stencils
-(Jacobi-2D, Seidel-2D). This totals 155 gem5 \cite{gem5:2020} simulations,
-each instrumented through \textit{libm5} so that statistics cover exactly the
-region of interest (\textsc{roi}).
+(Jacobi-2D, Seidel-2D): 155 gem5 \cite{gem5:2020} simulations, each
+instrumented through \textit{libm5} so that statistics cover exactly the region
+of interest (\textsc{roi}).
 
 The three factors differ by more than an order of magnitude in leverage: line
 size buys up to \(+15.4\%\) \textsc{ipc}, capacity up to \(+7.2\%\), and
@@ -162,10 +162,9 @@ every measured change is attributable to a single cache parameter; (ii)~a
 predictive criterion: one measured quantity, \(f_{\text{stall}}\), orders the
 five kernels for both effective factors and predicts the line-size speedups from
 one baseline run, with the residual explained; and (iii)~a reproducible artifact
-with run-to-run determinism verified, including null results usually discarded.
-For the five kernels studied, this inverts the intuitive ordering of cache
-parameters: the gains exploit spatial locality, not conflict avoidance or
-capacity.
+with determinism verified and null results reported. For these five kernels,
+this inverts the intuitive ordering: the gains exploit spatial locality, not
+conflict avoidance or capacity.
 
 \section{Related Work}\label{sec:related}
 
@@ -173,9 +172,9 @@ The parameters we sweep were first characterized by trace-driven simulation.
 \cite{smith:1987} found the miss-ratio reduction from longer lines
 \enquote{relatively stable across workloads}, with an optimum of 16--64 bytes set
 by the memory of the time; our timing-accurate sweep reproduces that stability
-(a near-exact \(8\times\) miss reduction in every kernel), shows its performance
-value nonetheless varying 30-fold, and at 256-byte lines exposes the
-transfer-time penalty he discussed. \cite{hill:1989} quantified
+(a near-exact \(8\times\) miss reduction in every kernel), finds its performance
+value varying 30-fold, and at 256 bytes exposes the transfer-time penalty he
+discussed. \cite{hill:1989} quantified
 associativity: halving it from 8 to 4, 4 to 2, and 2 to 1 ways raised miss
 ratios by about 5, 10, and 30\% on general-purpose traces; our regular kernels
 are the limiting case in which returns beyond two ways vanish. \cite{cantin:2001} tabulated miss ratios over capacity and
@@ -183,9 +182,10 @@ associativity for \textsc{spec cpu2000}, the closest precedent to a
 cross-workload, multi-parameter survey, but reports miss ratios only and holds
 line size fixed; \cite{dave:2024} sweep size, associativity, and line size in
 gem5 over nine big-data applications but also report miss rates only; and a
-concurrent preprint \cite{saha:2026} sweeps the same three L1 parameters over
-three microkernels, likewise finding sensitivity workload-specific. None offers
-a quantity explaining why workloads differ; we supply one.
+concurrent preprint \cite{saha:2026} sweeps the same three parameters, for L1
+only and on the same core model, over three synthetic microkernels, likewise
+finding sensitivity workload-specific. None offers a quantity explaining why
+workloads differ; we supply one.
 
 That quantity, \(f_{\text{stall}}\), is not new in form: it is the memory-stall
 term of the classic decomposition \(\text{\textsc{cpu} time} =
@@ -218,14 +218,14 @@ configurations confound them, differing in capacity \textit{and} line size
 derived from shipping commercial \textsc{cpu}s (Table~\ref{tbl:cachesizes}),
 since per-level capacities are co-designed under area and latency constraints;
 being \textit{categorical}, they are treated as one factor and reported as deltas
-against the Intel®~Core™~i7-6700K baseline, never attributing an effect to a
-specific level. Line size is swept over four power-of-two values from 32 to 256
+against the Intel®~Core™~i7-6700K baseline, attributing an effect to a level
+only where per-level miss counts single it out (Section~\ref{sub:capacity}). Line size is swept over four power-of-two values from 32 to 256
 bytes around a 64-byte baseline, and associativity over 1, 2, 4, 8, and 16 ways
 independently for L1, L2, and L3 (baselines 8-way for L1/L2, 16-way for L3),
 since varying one level at a time localizes conflict pressure.\footnote{Gem5
 expects powers of two, so the 12-way configuration of the Zen~5 \textsc{cpu}s
-cannot be reproduced.} The direct-mapped case is included as the only
-configuration in which every set conflict necessarily evicts.
+cannot be reproduced.} The direct-mapped case is the only one in which every set
+conflict necessarily evicts.
 
 Three further choices isolate the cache from the core. We use gem5's in-order
 \textit{TimingSimpleCPU}, the simplest model that still charges realistic memory
@@ -240,8 +240,10 @@ capacity effects (Section~\ref{sub:capacity}).
 
 \begin{table}[!htb]
 	\centering
-	\caption{Cache size presets (L1I = L1D). Atom and POWER10 sizes are rounded to
-	powers of two for gem5; Apple sizes are those of the efficiency cores.}
+	\caption{Cache size presets approximating public specifications (L1I = L1D;
+	Atom and POWER10 rounded to powers of two; Apple sizes are the efficiency
+	cores' with the system-level cache as L3). Small Embedded and Large Server are
+	synthetic.}
 	\label{tbl:cachesizes}
 	\footnotesize
 	\setlength{\tabcolsep}{2.4pt}
@@ -275,30 +277,31 @@ for it, and the controller's mean read-queue occupancy is exactly 1.00 in every
 run. Each workload was compiled with
 GCC at \texttt{-O3} as a static x86-64 \textsc{elf} against musl \cite{musl} and
 gem5's \textit{libm5}, whose calls immediately before and after the kernel
-invocation confine statistics to the \textsc{roi}.
+invocation confine statistics to the \textsc{roi}. Caches are not flushed at
+\textsc{roi} entry (\texttt{m5\_reset\_stats} resets counters only), so each kernel
+starts warm with what initialization left resident (decisive in
+Section~\ref{sub:capacity}).
 
 Two consequences of the core model must be stated. Absolute \textsc{ipc} is low
 (0.13--0.15, \textsc{cpi} \(\approx 7\)) because \textit{TimingSimpleCPU} is
-unpipelined: it serializes the fetch, execution, and data access of each
-instruction and pays the full 4-cycle L1 hit latency on every fetch and access,
-so 6.5--6.8 cycles per instruction are fixed overhead independent of the cache,
-and only relative changes are meaningful. That overhead also inflates the
-denominator of every stall fraction: a pipelined in-order core with base
-\textsc{cpi} near 1 would show larger sensitivities, an out-of-order core
-smaller; the ordering and additive structure, not the magnitudes, transfer.
+unpipelined: it serializes fetch, execution, and data access and pays the full
+4-cycle L1 hit latency on every fetch and access, so 6.5--6.8 cycles per
+instruction are fixed overhead independent of the cache, and only relative
+changes are meaningful. That overhead also inflates the denominator of every
+stall fraction: a pipelined in-order core with base \textsc{cpi} near 1 would show
+larger sensitivities, an out-of-order core smaller; the ordering and additive
+structure, not the magnitudes, transfer.
 
 From each run's \textsc{roi} statistics we record \textsc{ipc}, per-level hits,
 misses, miss rates, \textsc{mpki} (misses per kilo-instruction), and summed miss
-latency; presets are reported as \textsc{ipc} deltas against the per-kernel
-baseline. Our explanatory variable is
+latency. Our explanatory variable is
 \(f_{\text{stall}} = \texttt{dcache.overallMissLatency} / (\texttt{numCycles}
 \times 250)\), the fraction of \textsc{roi} execution during which the core is
 waiting for an L1D miss to be served, whether by L2, L3, or \textsc{dram}.
 Because the core blocks on each access, this is exactly the memory-stall term of
 the \textsc{cpu}-time decomposition \cite{hennessy:2017}, not an estimate; it
 excludes the constant L1 hit latency and the negligible L1I misses. We verified
-its additivity: non-stall cycles vary by less than 0.7\% across the entire
-line-size sweep of any kernel.
+its additivity: non-stall cycles vary under 0.7\% across any line-size sweep.
 
 Each configuration was simulated once, which suffices because the simulation is
 deterministic; we verified this rather than assumed it. The grid contains six
@@ -328,7 +331,7 @@ Seidel-2D apply five-point stencils \cite{golub:2013}, touching neighbors at
 offsets \(\pm 1\) (same or adjacent line) and \(\pm N\) (adjacent rows, 2--3~KiB
 apart, so the three live rows stay in L1D); Jacobi sweeps two arrays alternately,
 while Seidel-2D's in-place update adds loop-carried dependencies. Datasets were
-cut until runs took days at most; cubic Floyd-Warshall needed \texttt{SMALL}.
+cut until runs took days at most; cubic Floyd-Warshall needed \textsc{small}.
 
 \begin{table}[!htb]
 	\centering
@@ -358,21 +361,19 @@ figures, and this manuscript; only the C toolchain is loose (GCC~\(\geq 14\)).
 \section{Results}\label{sec:results}
 \subsection{Overview and Ranking of the Three Factors}\label{sub:overview}
 
-Table~\ref{tab:sensitivity} summarizes the sweep as how much \textsc{ipc} each
-factor buys per kernel: line size moves it by up to \(15.4\%\), capacity by up to
-\(7.2\%\), and associativity beyond two ways by at most \(0.2\%\). The kernel
-ordering is the same for line size and capacity, suggesting one quantity governs
-both, and the mechanism is uniform where the outcome is not: L1D \textsc{mpki}
-falls almost exactly \(8.0\times\) for four of five kernels while \textsc{ipc}
-gains span \(0.5\%\) to \(15.4\%\).
+Table~\ref{tab:sensitivity} summarizes the sweep. The kernel ordering is the same
+for line size and capacity, suggesting one quantity governs both, and the
+mechanism is uniform where the outcome is not: L1D \textsc{mpki} falls almost
+exactly \(8.0\times\) for four of five kernels while \textsc{ipc} gains span
+\(0.5\%\) to \(15.4\%\).
 
 \begin{table}[!htb]
 	\centering
 	\caption{\textsc{ipc} sensitivity per kernel, ordered by \(f_{\text{stall}}\) at
 	the 64-byte baseline. \textit{Line}: gain of the 256- over the 32-byte line,
-	measured and predicted by Eq.~\ref{eq:amdahl} from the baseline run alone.
-	\textit{Capacity}: gain of the best preset over baseline. \textit{Assoc.}:
-	largest change over 2- to 16-way at any level.}
+	measured and predicted by Eq.~\ref{eq:amdahl} from the baseline run.
+	\textit{Capacity}: best preset over baseline. \textit{Assoc.}: largest change
+	over 2- to 16-way at any level.}
 	\label{tab:sensitivity}
 	\small
 	\begin{tabular}{lcccccc}
@@ -410,12 +411,11 @@ is then Amdahl's law with stalled fraction \(f_{32} = 2f/(1+f)\) and an
 \end{equation}
 Table~\ref{tab:sensitivity} compares this prediction, from the baseline run
 alone, with the measured speedups: the error is at most 0.3~percentage points for
-four kernels and 1.4 points for \textsc{ata}x, all slight over-predictions
-explained in Section~\ref{sub:cacheline}.
+four kernels and 1.4 for \textsc{ata}x, all over-predictions, explained below.
 
 \begin{figure}[!htb]
 	\centering
-	\includegraphics[width=0.9\linewidth]{../figures/compact_cache_line.pdf}
+	\includegraphics[width=0.84\linewidth]{../figures/compact_cache_line.pdf}
 	\caption{Cache line size across kernels: the L1D miss rate (a) falls uniformly,
 	while \textsc{ipc} (b) rises by amounts that differ sharply between kernels.}
 	\label{fig:comparison_line}
@@ -454,9 +454,8 @@ achieves the full \(8.0\times\) miss reduction, yet \textsc{ipc} moves only
 \(+0.5\%\), because at \texttt{SMALL\_\-DATA\-SET} its 127~KiB footprint resides
 in the 256~KiB L2, each miss costs 26 cycles, and \(0.4\%\) of cycles are
 stall-exposed---an artifact of dataset reduction, not of the algorithm.
-Seidel-2D's summed miss latency drops \(87.5\%\), yet it gains only \(+2.2\%\):
-its \(f_{\text{stall}}\) is \(0.014\), so a large relative change in a memory
-metric that governed little of execution means little.
+Likewise Seidel-2D's summed miss latency drops \(87.5\%\) yet buys only
+\(+2.2\%\), having governed \(1.4\%\) of execution.
 
 Miss latency also explains the one residual of Eq.~\ref{eq:amdahl}. For the four
 kernels served from L2 or L3, mean per-miss latency is identical at every line
@@ -464,28 +463,31 @@ size and the prediction holds to 0.3 points. For \textsc{ata}x it is 115, 112,
 and 117 cycles at 32, 64, and 128 bytes but 159 at 256: a 256-byte line is four
 64-byte \textsc{ddr3} bursts and eight beats on the 32-byte crossbars, so
 transfer time, negligible at 64 bytes, becomes a third of the miss cost---the
-bandwidth penalty of long lines noted by \cite{smith:1987}, and why \textsc{ata}x
-gains \(15.4\%\) rather than the predicted \(16.8\%\). \textsc{dram} traffic is
-invariant at 38.5~MiB (32.0 read, 8.4 written back), since \textsc{ata}x's misses
+bandwidth penalty of long lines noted by \cite{smith:1987}. Of the 1.4 points by
+which \textsc{ata}x falls short of the predicted \(16.8\%\), this latency rise
+accounts for 1.2 and the \(7.6\times\) rather than \(8\times\) miss reduction for
+0.1. \textsc{dram} traffic is invariant at 38.5~MiB (30.5 read, 8.0 written
+back), since \textsc{ata}x's misses
 are compulsory: longer lines fetch the same bytes in fewer, larger transfers; the
 other four kernels move under 4~KiB to \textsc{dram}.
 
 \subsection{Associativity: A Structurally Low-Leverage Parameter}\label{sub:assoc}
 
 Associativity's effect is not merely small but structurally bounded for these
-kernels: it addresses conflict misses specifically, and the five kernels access
-memory at unit stride, or at a fixed row offset for the stencils, so successive
-addresses spread uniformly over the index bits and few simultaneously-live
-addresses alias to one set. Their misses are compulsory and capacity misses,
-which a parameter targeting conflict misses cannot help.
+kernels: it addresses conflict misses, and in the tested configurations the
+kernels' live data (a few rows of 2--3~KiB for the stencils, two rows for
+\textsc{gemm}) occupy at most four ways of any L1D set, so beyond the second way
+little remains to remove; \textsc{ata}x's 50~KiB cyclic working set is the
+exception, and behaves accordingly.
 
-The data bear this out with almost no residual. At L1, \textsc{ipc} varies by at
-most \(0.18\%\) (\textsc{ata}x) and by \(0.00\%\) for three kernels across the
-entire 2-to-16-way range; L2 and L3 are flatter still. The sole exception is the
-direct-mapped case, where every alias necessarily evicts: a direct-mapped L1D
-has a miss rate up to \(96\%\) higher than an 8-way one (Floyd-Warshall), yet
-even this is largely invisible in \textsc{ipc}, since eliminating it is worth
-only \(+0.29\%\). This is the limiting case of \cite{hill:1989}: on general-purpose
+The data bear this out. From 2 to 16 ways, L1D miss counts are identical for
+three kernels, within \(0.4\%\) for \textsc{gemm}, and vary \(\pm 6\%\) only for
+\textsc{ata}x, whose 50~KiB cyclic working set interacts with \textsc{lru}; L1
+\textsc{ipc} varies by at most \(0.18\%\), and L2 and L3 are flatter still.
+Conflict misses do exist at one way, where every alias evicts: a direct-mapped
+L1D has up to \(96\%\) more misses than an 8-way one (Floyd-Warshall), yet even
+this is largely invisible in \textsc{ipc}, since eliminating it is worth only
+\(+0.29\%\). This is the limiting case of \cite{hill:1989}: on general-purpose
 traces each doubling beyond two ways still paid a diminishing return, whereas for
 these five kernels the second way captures essentially all the conflict pressure.
 One curiosity runs the other way: \textsc{gemm}'s direct-mapped L2 is \(0.5\%\)
@@ -496,30 +498,34 @@ mapping keeps a fixed subset (314~K hits).
 \subsection{Capacity: A Threshold Effect, Not a Continuum}\label{sub:capacity}
 
 Capacity is neither uniform (like line size) nor inert (like associativity) but a
-\textit{threshold} effect, active only when the working set crosses the
-\textsc{llc} boundary, as the agreement between Table~\ref{tab:workloads} and the
-capacity column of Table~\ref{tab:sensitivity} shows. \textsc{ata}x is the only
-kernel whose footprint (30.5~MiB, \(3.8\times\) the baseline \textsc{llc}) exceeds
-the hierarchy, and the only one with a substantial response: \(+5.9\%\) for the
-Ryzen~5600X and 7700X presets (32~MiB L3) and \(+7.2\%\) for Large Server (64~MiB
-L3), precisely the configurations whose \textsc{llc} holds a meaningful fraction
-of \(A\). The other four, at \(0.12\)--\(0.15\times\) the baseline \textsc{llc},
-gain at most \(+2.7\%\): they already fit.
+\textit{threshold} effect, active only when a working set crosses the
+\textsc{llc} boundary. \textsc{ata}x is the only kernel whose footprint
+(30.5~MiB, \(3.8\times\) the baseline \textsc{llc}) exceeds the hierarchy, and the
+only one with a substantial response; the other four, at
+\(0.015\)--\(0.15\times\) the baseline \textsc{llc}, gain at most \(+2.7\%\).
+Although presets vary all levels jointly, per-level miss counts attribute
+\textsc{ata}x's gain. Its L3 misses fall from 499.5~K to 513 in exactly the
+presets with L3 \(\geq 32\)~MiB, worth \(+5.9\%\) whether L2 is 512~KiB (Ryzen
+5600X) or 1~MiB (7700X), while every preset with L3 \(\leq 16\)~MiB and a 32~KiB
+L1 yields \(0.00\%\) with L2 anywhere from 256~KiB to 2~MiB; the Apple presets'
+64~KiB L1D adds \(+1.2\%\) with L3 misses unchanged, and Large Server combines
+both for \(+7.2\%\). The mechanism is the warm start of Section~\ref{sub:system}:
+the \textsc{roi} reads \(A\) exactly once, so the gain is \(A\) left resident by
+initialization, which a 32~MiB L3 holds and a 16~MiB one, under \textsc{lru}
+streaming, does not; a cold start would show no capacity effect for
+\textsc{ata}x at all.
 
-The effect is non-monotonic in nominal capacity: for \textsc{ata}x the i9-9900K
-preset (16~MiB L3) yields no gain while the Ryzen~5600X (32~MiB) yields
-\(+5.9\%\), because what matters is whether the \textsc{llc} crosses the kernel's
-reuse-distance threshold, not total bytes. The one negative result runs in the
-expected direction: Seidel-2D loses \(3.1\%\) under Small Embedded, the only
-preset shrinking the hierarchy, as its 1.22~MiB grid exceeds that preset's 1~MiB
-L3. Because datasets were reduced for tractability, four of five kernels sit on
-the insensitive side of the threshold, so our capacity effects are lower bounds
-and part of the cross-kernel variation in Table~\ref{tab:sensitivity} reflects
-dataset choice: sensitivity is a property of the pair (kernel, dataset), acting
-through \(f_{\text{stall}}\). One further null result: the L1I never exceeded 44
-misses in any run, as the kernel's few kilobytes of code are resident before
-\textit{libm5} starts collecting---a pitfall of \textsc{roi} scoping, not evidence
-that instruction fetch is unimportant.
+The one negative result runs in the expected direction: Seidel-2D loses
+\(3.1\%\) under Small Embedded, the only preset shrinking the hierarchy, as its
+1.22~MiB grid, reused across 100 time steps, exceeds that preset's 1~MiB L3.
+Because datasets were reduced for tractability, four of five kernels sit on the
+insensitive side of the threshold, so our capacity results likely understate the
+sensitivity of larger workloads, and part of the cross-kernel variation in
+Table~\ref{tab:sensitivity} reflects dataset choice: sensitivity is a property
+of the pair (kernel, dataset). One
+further null result: the L1I never exceeded 44 misses in any run, as the
+kernel's code is resident before \textit{libm5} starts collecting---a pitfall of
+\textsc{roi} scoping, not evidence that instruction fetch is unimportant.
 
 \section{Conclusion}\label{sec:conclusion}
 
@@ -529,8 +535,7 @@ follows from whether a kernel's access pattern is genuinely spatial rather than
 absorbed by temporal reuse, and whether its working set is large enough for it
 to be miss-bound at all. Both reduce to \(f_{\text{stall}}\), which orders the
 kernels for both factors and, through Eq.~\ref{eq:amdahl}, predicts the
-line-size speedup from one baseline run to within 1.4 points, the residual being
-the transfer-time growth of \textsc{dram}-bound misses. Associativity is
+line-size speedup from one baseline run to within 1.4 points. Associativity is
 structurally low-leverage for these kernels, whose regular strides rarely produce
 the conflict misses it targets.
 
