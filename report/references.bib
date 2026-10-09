@@ -1,4 +1,4 @@
-@article{gem5-20:2007,
+@article{gem5:2020,
 	author       = {Jason Lowe{-}Power and
 	                Abdul Mutaal Ahmad and
 	                Ayaz Akram and
@@ -84,20 +84,22 @@
 	bibsource    = {dblp computer science bibliography, https://dblp.org},
 }
 
-@techreport{polybench:2016,
-	author      = {Louis-Noël Pouchet and Tomofumi Yuki and Uday Bondugula},
-	title       = {{PolyBench/C}: The Polyhedral Benchmark Suite},
-	institution = {Ohio State University},
-	year        = {2016},
-	note        = {Version 4.2.1 (beta), commit \texttt{3e87254} of
-	               \url{https://github.com/MatthiasJReisinger/PolyBenchC-4.2.1}},
+@misc{polybench:2016,
+	author       = {Pouchet, Louis-No{\"e}l and Yuki, Tomofumi},
+	title        = {{PolyBench/C} 4.2.1 (beta): The Polyhedral Benchmark Suite},
+	howpublished = {Software distribution, Ohio State University; kernel
+	                descriptions in \texttt{doc/polybench.pdf}},
+	year         = {2016},
+	note         = {Commit \texttt{3e87254} of
+	                \url{https://github.com/MatthiasJReisinger/PolyBenchC-4.2.1}},
 }
 
-@misc{zig:2024,
-	author = {{Zig Software Foundation}},
-	title  = {{Zig Programming Language}},
-	year   = {2024},
-	note   = {\url{https://ziglang.org/}. Accessed: 2026-04-01},
+@misc{zig:2025,
+	author       = {{Zig Software Foundation}},
+	title        = {{Zig Programming Language}, Release 0.15.2},
+	year         = {2025},
+	howpublished = {\url{https://ziglang.org/download/0.15.2/release-notes.html}},
+	note         = {Accessed: 2026-04-01},
 }
 
 @article{khoshavi:2018,
@@ -149,22 +151,6 @@
 	doi      = {10.1109/ACCESS.2025.3583201},
 }
 
-@article{lawson:1979,
-	author     = {Lawson, C. L. and Hanson, R. J. and Kincaid, D. R. and Krogh, F. T.},
-	title      = {Basic Linear Algebra Subprograms for {Fortran} Usage},
-	year       = {1979},
-	issue_date = {Sept. 1979},
-	publisher  = {Association for Computing Machinery},
-	address    = {New York, NY, USA},
-	volume     = {5},
-	number     = {3},
-	issn       = {0098-3500},
-	url        = {https://doi.org/10.1145/355841.355847},
-	doi        = {10.1145/355841.355847},
-	journal    = {ACM Trans. Math. Softw.},
-	month      = sep,
-	pages      = {308–323},
-	numpages   = {16}
 }
 
 @article{floyd:1962,
@@ -204,18 +190,20 @@
 }
 
 @book{golub:2013,
-	title     = {Matrix computations},
-	author    = {Golub, Gene H and Van Loan, Charles F},
+	title     = {Matrix Computations},
+	author    = {Golub, Gene H. and Van Loan, Charles F.},
+	edition   = {4th},
 	year      = {2013},
-	publisher = {JHU press},
+	publisher = {Johns Hopkins University Press},
+	address   = {Baltimore, MD},
 }
 
 @misc{musl,
-	title        = {musl libc},
+	title        = {musl libc, Version 1.2.5},
 	author       = {Felker, Rich and others},
 	year         = {2024},
 	howpublished = {\url{https://musl.libc.org/}},
-	note         = {Accessed: 2026-04-03}
+	note         = {As bundled by Zig 0.15.2. Accessed: 2026-04-03}
 }
 
 @article{smith:1987,

@@ -337,6 +337,69 @@ Neither correction changes any measured number or any conclusion; both change
 the mechanism offered for gemm’s and atax’s line-size response, and the
 revised Section 4.2 is built on the corrected descriptions.
 
+### Camera-ready citation audit
+
+After the revision was drafted, every reference was checked against its
+primary source: not only that the metadata resolve, but that the sentence
+citing it is something the source actually says. The following were corrected;
+each rewording was made line-neutral so the body stayed within eight pages.
+
+- **Smith (1987)**: wrong DOI in the first draft of the revision
+  (`10.1109/TC.1987.1676998`); corrected to `10.1109/TC.1987.5009537`. The
+  paper studies line sizes of 4–128 bytes, so its “relatively stable across
+  workloads” finding is cited for that range only; the 256-byte behavior is
+  presented as our result.
+- **Hennessy and Patterson, 6th ed.**: the first draft gave 2019; the edition
+  is dated 2017. The citation now points to Appendix B, where the CPU-time
+  decomposition into execution and memory-stall cycles appears.
+- **Bueno et al. (2024)**: the first draft said the paper “shows that cache
+  conclusions shift by more than 30% with the measurement procedure alone”.
+  That is not what the paper reports. Its 30% is the *reduction* in the number
+  of changes in replacement-policy rankings (relative to full simulation)
+  achieved by their LLC-activity-weighted interval selection, compared with
+  conventional SimPoint. The paper does show that the simulation window alone
+  can reorder policy rankings, which is the claim we need; the text now says
+  exactly that, and attributes the 30% to the reduction in reorderings.
+- **Khoshavi and DeMara (2018)**: the first draft said the work “replaces SRAM
+  with STT-RAM and reports a 51.7% L2 read-miss reduction”. The published
+  article’s 51.7% is measured against a *conventional STT-MRAM L2*, not SRAM
+  (the arXiv preprint’s 51.4% figure is the one measured against SRAM), and the
+  technique partitions an STT-RAM L2 into retention-relaxed and high-retention
+  arrays. The sentence now states both the mechanism and the baseline.
+- **Hill and Smith (1989)**: “direct-mapped to two-way removes most conflict
+  misses” was our gloss, not their statement. The text now quotes their result:
+  halving associativity from 8 to 4, 4 to 2, and 2 to 1 ways raised miss
+  ratios by about 5%, 10%, and 30% on their traces. (Relative to direct-mapped,
+  their two-way and eight-way caches have 22% and 34% lower miss ratios, so the
+  gloss was not far off; the numbers are simply more defensible.)
+- **Gholami et al. (2024)**: the paper studies the compute/bandwidth gap in AI
+  serving, not latency on general-purpose cores. “Still widening” became
+  “still widening in bandwidth”, which is what their data show.
+- **Shahid et al. (2025)**: “reports aggregate performance, not per-level
+  misses” was too categorical, since the paper does report cache hit/miss
+  rates during model validation. It now reads “optimizes on IPC and resource
+  cost, not per-level misses”, which describes its design-space results.
+- **Williams et al. (2009), Roofline**: “for overlapped accesses” attributed to
+  the model an assumption we could not point to in the text. Roofline is now
+  characterized by what it is: a bound on attainable throughput from arithmetic
+  intensity, peak compute, and peak bandwidth.
+- **Literature-gap claim**: “The gap is thus twofold: no … and no …” asserted
+  an absence we had not exhaustively surveyed (see “Related work” above). It is
+  now “We know of no … and of no …”, which is what we can defend.
+- **Lawson et al. (1979)**: removed. It is the Level-1 BLAS paper
+  (vector–vector operations) and covers neither atax’s matrix–vector products
+  (Level 2) nor gemm (Level 3). The pinned PolyBench source is the reference
+  for the kernels as simulated.
+- **PolyBench/C**: reclassified from `@techreport` to `@misc`. The 4.2.1
+  distribution credits Pouchet and Yuki and ships `doc/polybench.pdf`; the
+  third author in the earlier entry was misspelled and could not be confirmed
+  for that document.
+- **Bibliographic hygiene**: Golub and Van Loan now carries its edition (4th)
+  and publisher (Johns Hopkins University Press); the Zig entry cites the
+  0.15.2 release (October 2025) rather than the website with a 2024 date; musl
+  carries the version bundled by that Zig release (1.2.5); the gem5 citation
+  key `gem5-20:2007` became `gem5:2020`, matching the paper’s year.
+
 ## Reviewer Requests Deferred to Future Work
 
 These were raised in the reviews, are acknowledged in Section 5, and are not

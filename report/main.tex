@@ -112,7 +112,7 @@
 \section{Introduction}
 
 The disparity between processor and main memory speeds---the \textit{memory wall}
-identified three decades ago \cite{wulf:1995} and still widening
+identified three decades ago \cite{wulf:1995} and still widening in bandwidth
 \cite{gholami:2024}---remains the dominant first-order constraint on
 single-thread performance, and every modern processor mitigates it with a
 multi-level cache hierarchy: private first-level instruction and data caches
@@ -134,12 +134,12 @@ is worth different amounts to different programs, and converting it requires
 charging each miss its actual latency. Recent simulation work
 either fixes the hierarchy and varies one dimension \cite{khoshavi:2018}, sweeps
 many parameters for one core and reports aggregate performance
-\cite{shahid:2025}, or shows that cache conclusions shift by more than 30\% with
-the measurement procedure alone \cite{bueno:2024}---yet such procedures are
-seldom shipped in executable form. The gap is thus twofold: no
-\textit{cross-workload, multi-parameter} performance sensitivity data under one
-consistent, timing-accurate methodology, and no \textit{mechanized} pipeline in
-which that methodology is itself the artifact.
+\cite{shahid:2025}, or shows that the simulation window alone can reorder
+cache-policy rankings \cite{bueno:2024}---yet such procedures are seldom
+shipped in executable form. We know of no \textit{cross-workload,
+multi-parameter} performance sensitivity data under one consistent,
+timing-accurate methodology, and of no \textit{mechanized} pipeline in which
+that methodology is itself the artifact.
 
 We close it with a factor-isolating study whose entire pipeline is one
 version-pinned build graph executable by a single
@@ -151,7 +151,7 @@ presets derived from shipping commercial \textsc{cpu}s, line sizes from 32 to 25
 bytes, and associativities from direct-mapped to 16-way per level, over five
 PolyBench~4.2.1 kernels \cite{polybench:2016}: dense streaming (\textsc{ata}x,
 \textsc{gemm}), dynamic programming (Floyd-Warshall), and iterative stencils
-(Jacobi-2D, Seidel-2D). This totals 155 gem5 \cite{gem5-20:2007} simulations,
+(Jacobi-2D, Seidel-2D). This totals 155 gem5 \cite{gem5:2020} simulations,
 each instrumented through \textit{libm5} so that statistics cover exactly the
 region of interest (\textsc{roi}).
 
@@ -174,13 +174,12 @@ The parameters we sweep were first characterized by trace-driven simulation.
 \cite{smith:1987} found the miss-ratio reduction from longer lines
 \enquote{relatively stable across workloads}, with an optimum of 16--64 bytes set
 by the memory of the time; our timing-accurate sweep reproduces that stability
-(a near-exact \(8\times\) miss reduction in every kernel), shows that its
-performance value nonetheless varies 30-fold, and finds his transfer-time
-penalty reappearing at 256-byte lines. \cite{hill:1989} quantified
-associativity: direct-mapped to two-way removes most conflict misses, and each
-further doubling yields diminishing but nonzero returns on general-purpose
-traces; our regular kernels are the limiting case in which returns beyond two
-ways vanish. \cite{cantin:2001} tabulated miss ratios over capacity and
+(a near-exact \(8\times\) miss reduction in every kernel), shows its performance
+value nonetheless varying 30-fold, and finds his transfer-time penalty
+reappearing at 256-byte lines. \cite{hill:1989} quantified
+associativity: halving it from 8 to 4, 4 to 2, and 2 to 1 ways raised miss
+ratios by about 5, 10, and 30\% on general-purpose traces; our regular kernels
+are the limiting case in which returns beyond two ways vanish. \cite{cantin:2001} tabulated miss ratios over capacity and
 associativity for \textsc{spec cpu2000}, the closest precedent to a
 cross-workload, multi-parameter survey, but reports miss ratios only, holds line
 size fixed, and offers no quantity explaining why benchmarks differ. We report
@@ -189,20 +188,21 @@ performance, sweep three parameters, and supply that quantity.
 That quantity, \(f_{\text{stall}}\), is not new in form: it is the memory-stall
 term of the classic decomposition \(\text{\textsc{cpu} time} =
 (\text{\textsc{cpu} cycles} + \text{memory-stall cycles}) \times \text{cycle
-time}\) \cite{hennessy:2017}, expressed as a fraction and \textit{measured}
+time}\) \cite[App.~B]{hennessy:2017}, expressed as a fraction and \textit{measured}
 rather than modeled, since in a blocking core gem5's summed miss latency is
 exactly the stall time. It differs in regime from Roofline \cite{williams:2009},
-which bounds throughput by arithmetic intensity against peak bandwidth for
-overlapped accesses; our core is latency-bound with one outstanding miss, where
-the stall term is additive and Amdahl's law needs no overlap correction. Our
+which bounds attainable throughput by arithmetic intensity, peak compute, and
+peak bandwidth; our core is latency-bound with one outstanding miss, where the
+stall term is additive and Amdahl's law needs no overlap correction. Our
 contribution is the empirical demonstration that it orders kernels for two
-parameters and predicts the line-size speedup from one run. Closer in time, \cite{khoshavi:2018} replaces \textsc{sram} with
-\textsc{stt-ram} and reports a 51.7\% L2 read-miss reduction against one fixed
-hierarchy, incomparable with conventional tuning; \cite{shahid:2025} explores the
-\textsc{cva6} \textsc{risc-v} design space in gem5 but reports aggregate
-performance, not per-level misses; and \cite{bueno:2024} shows replacement-policy
-conclusions moving by over 30\% with interval weighting alone, our motivation for
-shipping the procedure as an executable artifact.
+parameters and predicts the line-size speedup from one run. Closer in time,
+\cite{khoshavi:2018} partitions an \textsc{stt-ram} L2 by retention and cuts L2
+read misses 51.7\% against a conventional \textsc{stt-ram} L2, one fixed
+hierarchy; \cite{shahid:2025} explores the \textsc{cva6} \textsc{risc-v} design
+space in gem5 but optimizes on \textsc{ipc} and resource cost, not per-level
+misses; and \cite{bueno:2024} shows that the simulation window reorders
+replacement-policy rankings, and that \textsc{llc}-activity weighting cuts such
+reorderings by over 30\%, our motivation for an executable procedure.
 
 \section{Methodology}\label{sec:methodology}
 \subsection{Experimental Design}\label{sub:rationale}
@@ -314,7 +314,7 @@ The five PolyBench~4.2.1 \cite{polybench:2016} kernels span the two mechanisms w
 identify as decisive, access-pattern spatiality and working-set size;
 Table~\ref{tab:workloads} gives datasets and footprints, and the loop structures
 below are those of version 4.2.1.
-\textsc{ata}x computes \(y = A^{T}(Ax)\) \cite{lawson:1979}: for each row \(i\)
+\textsc{ata}x computes \(y = A^{T}(Ax)\): for each row \(i\)
 it streams \(A_{i,:}\) twice, for \(\mathit{tmp}_i = A_{i,:}\cdot x\) and for
 \(y \mathrel{+}= \mathit{tmp}_i A_{i,:}\), so the 30.4~MiB matrix is read with no
 reuse beyond that pair of passes. \textsc{gemm} computes \(C \leftarrow \beta C +
@@ -351,7 +351,7 @@ complexity, required \texttt{SMALL\_\-DATA\-SET}.
 \end{table}
 
 The end-to-end workflow is one idempotent build graph in the Zig Build System
-(Zig~0.15.2 \cite{zig:2024}) chaining dependency checks, a pinned Python runtime,
+(Zig~0.15.2 \cite{zig:2025}) chaining dependency checks, a pinned Python runtime,
 gem5 (commit \texttt{7a2b0e4}), \textit{libm5}, the workloads, the sweep, the
 figures, and this manuscript; only the C toolchain is loose (GCC~\(\geq 14\)).
 
@@ -489,9 +489,9 @@ only \(+0.29\%\). This is the limiting case of \cite{hill:1989}: on general-purp
 traces each doubling beyond two ways still paid a diminishing return, whereas for
 regular strides the second way captures essentially all the conflict pressure.
 One curiosity runs the other way: \textsc{gemm}'s direct-mapped L2 is \(0.5\%\)
-\textit{faster} than the 8-way \textsc{lru} one, because cyclic streaming of
-\(B\) (422~KiB) through the 256~KiB L2 leaves \textsc{lru} nothing (5.5~K hits)
-while direct mapping keeps a fixed subset (314~K hits).
+\textit{faster} than 8-way \textsc{lru}, since cyclically streaming \(B\)
+(422~KiB) through 256~KiB leaves \textsc{lru} nothing (5.5~K hits) while direct
+mapping keeps a fixed subset (314~K hits).
 
 \subsection{Capacity: A Threshold Effect, Not a Continuum}\label{sub:capacity}
 
