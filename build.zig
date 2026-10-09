@@ -776,7 +776,7 @@ fn buildReport(step: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!vo
     defer allocator.free(report_result.stderr);
 
     if (report_result.term.Exited != 0) {
-        std.debug.print("\x1b[1;31mReport build failed:\x1b[0m\n{s}\n", .{report_result.stderr});
+        std.debug.print("\x1b[1;31mReport build failed:\x1b[0m\n{s}\n{s}\n", .{ report_result.stdout, report_result.stderr });
         return error.ReportBuildFailed;
     }
 
