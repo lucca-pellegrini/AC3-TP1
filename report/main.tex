@@ -189,7 +189,7 @@ performance, sweep three parameters, and supply that quantity.
 That quantity, \(f_{\text{stall}}\), is not new in form: it is the memory-stall
 term of the classic decomposition \(\text{\textsc{cpu} time} =
 (\text{\textsc{cpu} cycles} + \text{memory-stall cycles}) \times \text{cycle
-time}\) \cite{hennessy:2019}, expressed as a fraction and \textit{measured}
+time}\) \cite{hennessy:2017}, expressed as a fraction and \textit{measured}
 rather than modeled, since in a blocking core gem5's summed miss latency is
 exactly the stall time. It differs in regime from Roofline \cite{williams:2009},
 which bounds throughput by arithmetic intensity against peak bandwidth for
@@ -294,7 +294,7 @@ baseline. Our explanatory variable is
 \times 250)\), the fraction of \textsc{roi} execution during which the core is
 waiting for an L1D miss to be served, whether by L2, L3, or \textsc{dram}.
 Because the core blocks on each access, this is exactly the memory-stall term of
-the \textsc{cpu}-time decomposition \cite{hennessy:2019}, not an estimate; it
+the \textsc{cpu}-time decomposition \cite{hennessy:2017}, not an estimate; it
 excludes the constant L1 hit latency and the negligible L1I misses. We verified
 its additivity: non-stall cycles vary by less than 0.7\% across the entire
 line-size sweep of any kernel.
